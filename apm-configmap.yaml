@@ -1,0 +1,11 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: patron-comp-phase2-java-atk-svc-apm-configmap
+data:
+  _JAVA_OPTIONS: -javaagent:/javaagent/opentelemetry-javaagent.jar -Dotel.javaagent.extensions=/javaagent/extensions
+  OTEL_SERVICE_NAME: patron-comp-phase2-java-atk
+  OTEL_RESOURCE_ATTRIBUTES: "deployment.environment=dev"
+  OTEL_EXPORTER_OTLP_PROTOCOL: grpc
+  OTEL_LOGS_EXPORTER: otlp
+  OTEL_EXPORTER_OTLP_ENDPOINT: 'https://qa-apm-server.elastic.svc.cluster.local:8200'
