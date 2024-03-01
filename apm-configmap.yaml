@@ -9,3 +9,9 @@ data:
   OTEL_EXPORTER_OTLP_PROTOCOL: grpc
   OTEL_LOGS_EXPORTER: otlp
   OTEL_EXPORTER_OTLP_ENDPOINT: 'https://qa-apm-server.elastic.svc.cluster.local:8200'
+
+
+
+kubectl get namespace "stucked-namespace" -o json \
+  | tr -d "\n" | sed "s/\"finalizers\": \[[^]]\+\]/\"finalizers\": []/" \
+  | kubectl replace --raw /api/v1/namespaces/stucked-namespace/finalize -f -
