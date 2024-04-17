@@ -15,3 +15,21 @@ data:
 kubectl get namespace "stucked-namespace" -o json \
   | tr -d "\n" | sed "s/\"finalizers\": \[[^]]\+\]/\"finalizers\": []/" \
   | kubectl replace --raw /api/v1/namespaces/stucked-namespace/finalize -f -
+
+
+
+Map dynamic_templates = new HashMap();
+for (entry in ctx._metric_descriptions.entrySet()) {
+  String name = entry.getKey();
+  Map description = entry.getValue();
+  String metric_type = description.type;
+  if (metric_type == "histogram") {
+    dynamic_templates[name] = "histogram";
+  } else if (metric_type == "summary") {
+    dynamic_templates[name] = "summary";
+  } else {
+    dynamic_templates[name] = "double";
+  }
+}
+ctx._dynamic_templates = dynamic_templates;
+ctx.remove("_metric_descriptions");
