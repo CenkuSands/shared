@@ -30,3 +30,13 @@
    rm cert.pem
 
    echo "Verification complete."
+
+
+
+Extracting certificate from keystore...
+Verifying certificate chain...
+Error loading file /cp711/prod_installation/trustStoreFile.jks
+Checking certificate expiration...
+unable to load certificate
+140226394707776:error:0909006C:PEM routines:get_name:no start line:crypto/pem/pem_lib.c:745:Expecting: TRUSTED CERTIFICATE
+Verification complete.
