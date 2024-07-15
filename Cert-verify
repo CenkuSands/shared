@@ -1,0 +1,32 @@
+#!/bin/bash
+
+   # Set variables
+   KEYSTORE_PATH="/path/to/new/keystore.jks"
+   KEYSTORE_PASSWORD="your_keystore_password"
+   TRUSTSTORE_PATH="/path/to/new/truststore.jks"
+   TRUSTSTORE_PASSWORD="your_truststore_password"
+
+   # Verify keystore
+   echo "Verifying keystore..."
+   keytool -list -v -keystore $KEYSTORE_PATH -storepass $KEYSTORE_PASSWORD
+
+   # Verify truststore
+   echo "Verifying truststore..."
+   keytool -list -v -keystore $TRUSTSTORE_PATH -storepass $TRUSTSTORE_PASSWORD
+
+   # Extract certificate from keystore
+   echo "Extracting certificate from keystore..."
+   keytool -exportcert -alias your_cert_alias -keystore $KEYSTORE_PATH -storepass $KEYSTORE_PASSWORD -rfc > cert.pem
+
+   # Verify certificate chain
+   echo "Verifying certificate chain..."
+   openssl verify -CAfile $TRUSTSTORE_PATH cert.pem
+
+   # Check certificate expiration
+   echo "Checking certificate expiration..."
+   openssl x509 -in cert.pem -noout -dates
+
+   # Clean up
+   rm cert.pem
+
+   echo "Verification complete."
