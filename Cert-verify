@@ -40,3 +40,56 @@ Checking certificate expiration...
 unable to load certificate
 140226394707776:error:0909006C:PEM routines:get_name:no start line:crypto/pem/pem_lib.c:745:Expecting: TRUSTED CERTIFICATE
 Verification complete.
+
+
+
+#!/bin/bash
+
+# Set variables
+KEYSTORE_PATH="/cp711/prod_installation/keystoreFile.jks"
+KEYSTORE_PASSWORD="your_keystore_password"
+TRUSTSTORE_PATH="/cp711/prod_installation/trustStoreFile.jks"
+TRUSTSTORE_PASSWORD="your_truststore_password"
+CERT_ALIAS="your_cert_alias"
+
+# Function to check if a command was successful
+check_success() {
+    if [ $? -ne 0 ]; then
+        echo "Error: $1"
+        exit 1
+    fi
+}
+
+# Verify keystore
+echo "Verifying keystore..."
+keytool -list -v -keystore $KEYSTORE_PATH -storepass $KEYSTORE_PASSWORD
+check_success "Failed to verify keystore. Check the path and password."
+
+# Verify truststore
+echo "Verifying truststore..."
+keytool -list -v -keystore $TRUSTSTORE_PATH -storepass $TRUSTSTORE_PASSWORD
+check_success "Failed to verify truststore. Check the path and password."
+
+# Extract certificate from keystore
+echo "Extracting certificate from keystore..."
+keytool -exportcert -alias $CERT_ALIAS -keystore $KEYSTORE_PATH -storepass $KEYSTORE_PASSWORD -rfc > cert.pem
+check_success "Failed to extract certificate. Check the alias, keystore path, and password."
+
+# Verify certificate chain
+echo "Verifying certificate chain..."
+# Convert JKS truststore to PEM format
+keytool -exportcert -alias $CERT_ALIAS -keystore $TRUSTSTORE_PATH -storepass $TRUSTSTORE_PASSWORD -rfc > truststore.pem
+check_success "Failed to export truststore to PEM format."
+
+openssl verify -CAfile truststore.pem cert.pem
+check_success "Certificate chain verification failed."
+
+# Check certificate expiration
+echo "Checking certificate expiration..."
+openssl x509 -in cert.pem -noout -dates
+check_success "Failed to check certificate expiration."
+
+# Clean up
+rm cert.pem truststore.pem
+
+echo "Verification complete."
