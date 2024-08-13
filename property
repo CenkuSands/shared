@@ -1,0 +1,22 @@
+create  SECURITY INTEGRATION adgroup
+PROPERTIES (
+    "type" = "ldap",
+    "ldap_group_match_use_member_uid" = "false",
+    "ldap_server_host" = "qadomain01.VenetianQA.local",
+    "ldap_server_port" = "636",
+    "ldap_bind_base_dn" = "OU=starrocks,OU=IT Account,OU=Accounts,DC=VenetianQA,DC=local",
+    "ldap_user_search_attr" = "sAMAccountName",
+    "ldap_bind_root_dn" = "CN=svc_starrocks_ldap,OU=starrocks,OU=IT Account,OU=Accounts,DC=VenetianQA,DC=local",
+    "ldap_bind_root_pwd" = "Venetian2024$$",
+    "ldap_cache_refresh_interval" = "60",
+    "ldap_ssl_conn_allow_insecure" = "false",
+    "ldap_user_group_match_attr" = "regex:cn=.*"
+);
+
+
+CREATE ROLE MAPPING user_admin
+PROPERTIES (
+"integration_name" = "adgroup",
+"role" = "user_admin",
+"ldap_group_list" = "cn=user_admin,OU=starrocks,OU=IT Account,OU=Accounts,DC=VenetianQA,DC=local"
+);
