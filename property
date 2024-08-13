@@ -20,3 +20,7 @@ PROPERTIES (
 "role" = "user_admin",
 "ldap_group_list" = "cn=user_admin,OU=starrocks,OU=IT Account,OU=Accounts,DC=VenetianQA,DC=local"
 );
+
+
+CN=Wong\, Paul,OU=Dev Team,OU=IT Account,OU=Accounts,DC=VenetianQA,DC=local
+CN=cen.ku,OU=Dev Team,OU=IT Account,OU=Accounts,DC=VenetianQA,DC=local
