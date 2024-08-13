@@ -24,3 +24,5 @@ PROPERTIES (
 
 CN=Wong\, Paul,OU=Dev Team,OU=IT Account,OU=Accounts,DC=VenetianQA,DC=local
 CN=cen.ku,OU=Dev Team,OU=IT Account,OU=Accounts,DC=VenetianQA,DC=local
+
+ldap_user_group_match_attr=regex:^CN=([^,\\]+(?:\\, [^,\\]+)?)
