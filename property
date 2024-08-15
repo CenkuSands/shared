@@ -51,3 +51,27 @@ oc get deployments --all-namespaces -o custom-columns=NAMESPACE:.metadata.namesp
     # Print the information in tab-separated format
     printf "%-15s\t%-30s\t%-10s\t%-14s\t%-17s\t%-12s\t%-15s\n" "$namespace" "$name" "$replicas" "$cpu_requests" "$memory_requests" "$cpu_limits" "$memory_limits"
 done
+
+
+#!/bin/bash
+
+# Print header
+echo -e "Namespace\tDeployment Name\t\t\tReplicas\tCPU Requests\tMemory Requests\tCPU Limits\tMemory Limits"
+
+# Loop over all deployments in all namespaces
+oc get deployments --all-namespaces -o custom-columns=NAMESPACE:.metadata.namespace,NAME:.metadata.name,REPLICAS:.spec.replicas --no-headers | while read -r namespace name replicas; do
+    # Get resource requests and limits for the first container in the deployment
+    cpu_requests=$(oc get deployment "$name" -n "$namespace" -o jsonpath='{.spec.template.spec.containers[0].resources.requests.cpu}')
+    memory_requests=$(oc get deployment "$name" -n "$namespace" -o jsonpath='{.spec.template.spec.containers[0].resources.requests.memory}')
+    cpu_limits=$(oc get deployment "$name" -n "$namespace" -o jsonpath='{.spec.template.spec.containers[0].resources.limits.cpu}')
+    memory_limits=$(oc get deployment "$name" -n "$namespace" -o jsonpath='{.spec.template.spec.containers[0].resources.limits.memory}')
+    
+    # Check for null values and substitute with "N/A" or leave blank
+    cpu_requests=${cpu_requests:-N/A}
+    memory_requests=${memory_requests:-N/A}
+    cpu_limits=${cpu_limits:-N/A}
+    memory_limits=${memory_limits:-N/A}
+    
+    # Print the information in tab-separated format
+    printf "%-15s\t%-30s\t%-10s\t%-14s\t%-17s\t%-12s\t%-15s\n" "$namespace" "$name" "$replicas" "$cpu_requests" "$memory_requests" "$cpu_limits" "$memory_limits"
+done
