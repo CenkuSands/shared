@@ -75,3 +75,5 @@ oc get deployments --all-namespaces -o custom-columns=NAMESPACE:.metadata.namesp
     # Print the information in tab-separated format
     printf "%-15s\t%-30s\t%-10s\t%-14s\t%-17s\t%-12s\t%-15s\n" "$namespace" "$name" "$replicas" "$cpu_requests" "$memory_requests" "$cpu_limits" "$memory_limits"
 done
+
+=IF(ISNUMBER(SEARCH("m", A1)), VALUE(LEFT(A1, LEN(A1)-1)), A1 * 1000)
