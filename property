@@ -32,3 +32,5 @@ ldap_user_group_match_attr=regex:^CN=([^,\\]+(?:\\, [^,\\]+)?)
 
 oc get deployment --all-namespaces -o=go-template --template='{{"Namespace       Deployment Name                Replicas  CPU Requests  Memory Requests  CPU Limits  Memory Limits"}}
 {{range .items}}{{printf "%-15s %-30s %-10d %-14s %-17s %-12s %-15s\n" .metadata.namespace .metadata.name .spec.replicas (index .spec.template.spec.containers 0).resources.requests.cpu (index .spec.template.spec.containers 0).resources.requests.memory (index .spec.template.spec.containers 0).resources.limits.cpu (index .spec.template.spec.containers 0).resources.limits.memory}}{{end}}'
+
+oc get deployment --all-namespaces -o=jsonpath='{range .items[*]}{.metadata.namespace}{"\t"}{.metadata.name}{"\t"}{.spec.replicas}{"\t"}{.spec.template.spec.containers[*].resources.requests.cpu}{"\t"}{.spec.template.spec.containers[*].resources.requests.memory}{"\t"}{.spec.template.spec.containers[*].resources.limits.cpu}{"\t"}{.spec.template.spec.containers[*].resources.limits.memory}{"\n"}{end}'
