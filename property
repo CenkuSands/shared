@@ -34,3 +34,20 @@ oc get deployment --all-namespaces -o=go-template --template='{{"Namespace      
 {{range .items}}{{printf "%-15s %-30s %-10d %-14s %-17s %-12s %-15s\n" .metadata.namespace .metadata.name .spec.replicas (index .spec.template.spec.containers 0).resources.requests.cpu (index .spec.template.spec.containers 0).resources.requests.memory (index .spec.template.spec.containers 0).resources.limits.cpu (index .spec.template.spec.containers 0).resources.limits.memory}}{{end}}'
 
 oc get deployment --all-namespaces -o=jsonpath='{range .items[*]}{.metadata.namespace}{"\t"}{.metadata.name}{"\t"}{.spec.replicas}{"\t"}{.spec.template.spec.containers[*].resources.requests.cpu}{"\t"}{.spec.template.spec.containers[*].resources.requests.memory}{"\t"}{.spec.template.spec.containers[*].resources.limits.cpu}{"\t"}{.spec.template.spec.containers[*].resources.limits.memory}{"\n"}{end}'
+
+#!/bin/bash
+
+# Print header
+echo -e "Namespace\tDeployment Name\t\t\tReplicas\tCPU Requests\tMemory Requests\tCPU Limits\tMemory Limits"
+
+# Loop over all deployments in all namespaces
+oc get deployments --all-namespaces -o custom-columns=NAMESPACE:.metadata.namespace,NAME:.metadata.name,REPLICAS:.spec.replicas --no-headers | while read -r namespace name replicas; do
+    # Get resource requests and limits for the first container in the deployment
+    cpu_requests=$(oc get deployment "$name" -n "$namespace" -o jsonpath='{.spec.template.spec.containers[0].resources.requests.cpu}')
+    memory_requests=$(oc get deployment "$name" -n "$namespace" -o jsonpath='{.spec.template.spec.containers[0].resources.requests.memory}')
+    cpu_limits=$(oc get deployment "$name" -n "$namespace" -o jsonpath='{.spec.template.spec.containers[0].resources.limits.cpu}')
+    memory_limits=$(oc get deployment "$name" -n "$namespace" -o jsonpath='{.spec.template.spec.containers[0].resources.limits.memory}')
+    
+    # Print the information in tab-separated format
+    printf "%-15s\t%-30s\t%-10s\t%-14s\t%-17s\t%-12s\t%-15s\n" "$namespace" "$name" "$replicas" "$cpu_requests" "$memory_requests" "$cpu_limits" "$memory_limits"
+done
