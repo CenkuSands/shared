@@ -1,18 +1,33 @@
-ErrorReason{errCode = 2, msg='failed to get offset of partition: 0 in topic: SCL_DW_angel_LO__chip_attribution_history_view, err: Local: Bad message format, event: [thrd:sasl_ssl://10.113.5.13:9093/4]: sasl_ssl://10.113.5.13:9093/4: SSL handshake failed: error:1416F086:SSL routines:tls_process_server_certificate:certificate verify failed: broker certificate could not be verified, verify that ssl.ca.location is correctly configured or root CA certificates are installed (install ca-certificates package) (after 19ms in state SSL_HANDSHAKE), BE: TNetworkAddress(hostname:10.112.76.39, port:8060)'} 
+#!/bin/bash
 
+# Kafka bootstrap server
+BOOTSTRAP_SERVER="localhost:9092"
 
-Query	Test 1 - Value	Test 1  index - value	Test 2 - Value	Test 2 - index value	Test 3 - value	Test 3 - index value	Test 4 - value	Test 4 - index value	Test 5 - value	Test 5 -index value	Test 6 - value	Test 6 - index value	Test 7 - value	Test 7 - index value	Test 8 - value	Test 8 - index value	Test 9 value	Test 9 - index value	Test 10 value	Test 10 - index value
-Q1.1	50	36	46	40	50	36	43	36	36	43	36	33	36	33	40	40	40	36	43	36
-Q1.2	40	23	30	26	33	30	30	20	30	20	26	20	23	30	30	23	23	26	30	26
-Q1.3	50	30	40	33	40	36	40	36	36	40	36	30	33	36	36	36	33	33	36	30
-Q2.1	150	113	136	113	140	113	133	110	130	116	130	110	133	113	133	113	130	116	140	110
-Q2.2	126	80	116	80	120	76	106	76	106	80	106	80	110	73	103	73	103	73	110	80
-Q2.3	96	70	90	66	83	73	83	70	83	70	76	66	86	70	80	70	80	66	80	66
-Q3.1	160	193	153	183	143	186	143	193	140	200	146	206	146	186	143	193	146	200	140	186
-Q3.2	136	100	120	96	116	93	120	96	116	100	116	96	120	93	120	100	120	100	116	96
-Q3.3	106	66	106	60	103	60	103	60	100	63	96	63	100	56	100	63	96	66	96	56
-Q3.4	50	40	53	36	43	36	50	40	40	40	43	40	40	40	40	43	40	40	40	36
-Q4.1	173	176	160	166	160	170	160	163	153	166	150	170	156	163	156	173	156	170	156	166
-Q4.2	83	83	86	90	83	93	83	86	83	93	76	83	80	90	80	86	76	86	76	80
-Q4.3	70	63	73	56	70	66	66	60	66	60	66	60	63	56	63	60	63	63	60	60
-Total	1290	1073	1209	1045	1184	1068	1160	1046	1119	1091	1103	1057	1126	1039	1124	1073	1106	1075	1123	1028
+# Get the list of all topics
+TOPICS=$(kafka-topics.sh --bootstrap-server $BOOTSTRAP_SERVER --list)
+
+# Iterate over each topic
+for TOPIC in $TOPICS
+do
+  echo "Topic: $TOPIC"
+  
+  # Get the partitions for each topic
+  PARTITIONS=$(kafka-topics.sh --bootstrap-server $BOOTSTRAP_SERVER --describe --topic $TOPIC | grep "Partition:" | awk '{print $2}')
+
+  # Iterate over each partition
+  for PARTITION in $PARTITIONS
+  do
+    # Fetch the log directory information for each partition
+    LOG_DIR_INFO=$(kafka-log-dirs.sh --bootstrap-server $BOOTSTRAP_SERVER --describe --topic-list $TOPIC --partitions $PARTITION | grep -A 6 $PARTITION)
+    
+    # Extract the last modified timestamp (high water mark offset time)
+    LAST_MODIFIED=$(echo "$LOG_DIR_INFO" | grep "Offset:" | awk '{print $3}')
+    
+    # Convert the high watermark offset time to human-readable format
+    LAST_MODIFIED_HUMAN=$(date -d @$((LAST_MODIFIED/1000)) +"%Y-%m-%d %H:%M:%S")
+    
+    echo "Partition: $PARTITION - Last Modified: $LAST_MODIFIED_HUMAN"
+  done
+
+  echo ""
+done
