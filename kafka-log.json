@@ -1,35 +1,43 @@
 #!/bin/bash
 
-# Kafka bootstrap server
-BOOTSTRAP_SERVER="localhost:9092"
+# Kafka binaries path
+KAFKA_HOME="/path/to/kafka/bin"
 
-# Get the list of all topics
-TOPICS=$(kafka-topics.sh --bootstrap-server $BOOTSTRAP_SERVER --list)
+# Kafka broker address
+BROKER="localhost:9092"
 
-# Iterate over each topic
-for TOPIC in $TOPICS
-do
-  echo "Topic: $TOPIC"
-  
-  # Fetch the log directory information for each topic
-  LOG_DIR_INFO=$(kafka-log-dirs.sh --bootstrap-server $BOOTSTRAP_SERVER --describe --topic-list $TOPIC)
+# Function to get the last log timestamp of a topic
+get_last_update_date() {
+  local topic=$1
 
-  # Extract partition and high watermark offset information
-  echo "$LOG_DIR_INFO" | grep -E 'Partition:|Offset:' | while read -r line1; read -r line2
-  do
-    PARTITION=$(echo $line1 | awk '{print $2}')
-    OFFSET=$(echo $line2 | awk '{print $3}')
+  # Get the partitions for the topic
+  partitions=$($KAFKA_HOME/kafka-topics.sh --describe --topic $topic --bootstrap-server $BROKER | grep "Partition:" | awk '{print $2}')
 
-    # Convert the high watermark offset time to human-readable format (if it represents a timestamp)
-    LAST_MODIFIED_HUMAN=$(date -d @$((OFFSET/1000)) +"%Y-%m-%d %H:%M:%S")
+  last_update_timestamp=0
 
-    echo "Partition: $PARTITION - Last Modified: $LAST_MODIFIED_HUMAN"
+  # Loop through each partition and get the offset timestamp
+  for partition in $partitions; do
+    # Get the latest offset timestamp using offsetsForTimes
+    timestamp=$($KAFKA_HOME/kafka-run-class.sh kafka.tools.GetOffsetShell --broker-list $BROKER --time -1 --topic $topic --partition $partition | awk -F: '{print $3}')
+
+    if [[ $timestamp -gt $last_update_timestamp ]]; then
+      last_update_timestamp=$timestamp
+    fi
   done
 
-  echo ""
+  # Convert the timestamp to a human-readable date
+  if [[ $last_update_timestamp -gt 0 ]]; then
+    date -d @$((last_update_timestamp / 1000))
+  else
+    echo "No updates found"
+  fi
+}
+
+# Get all topics
+topics=$($KAFKA_HOME/kafka-topics.sh --list --bootstrap-server $BROKER)
+
+echo "Last update date for each topic:"
+for topic in $topics; do
+  echo -n "$topic: "
+  get_last_update_date $topic
 done
-
-
-Querying brokers for log directories information
-Received log directory information from brokers 1,2,3
-{"version":1,"brokers":[{"broker":1,"logDirs":[{"logDir":"/data","error":null,"partitions":[{"partition":"CDC.QA.G.PatronSession-0","size":7687,"offsetLag":0,"isFuture":false}]}]},{"broker":2,"logDirs":[{"logDir":"/data","error":null,"partitions":[{"partition":"CDC.QA.G.PatronSession-0","size":7687,"offsetLag":0,"isFuture":false}]}]},{"broker":3,"logDirs":[{"logDir":"/data","error":null,"partitions":[{"partition":"CDC.QA.G.PatronSession-0","size":7687,"offsetLag":0,"isFuture":false}]}]}]}
