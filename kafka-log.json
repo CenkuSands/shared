@@ -28,3 +28,8 @@ do
 
   echo ""
 done
+
+
+Querying brokers for log directories information
+Received log directory information from brokers 1,2,3
+{"version":1,"brokers":[{"broker":1,"logDirs":[{"logDir":"/data","error":null,"partitions":[{"partition":"CDC.QA.G.PatronSession-0","size":7687,"offsetLag":0,"isFuture":false}]}]},{"broker":2,"logDirs":[{"logDir":"/data","error":null,"partitions":[{"partition":"CDC.QA.G.PatronSession-0","size":7687,"offsetLag":0,"isFuture":false}]}]},{"broker":3,"logDirs":[{"logDir":"/data","error":null,"partitions":[{"partition":"CDC.QA.G.PatronSession-0","size":7687,"offsetLag":0,"isFuture":false}]}]}]}
