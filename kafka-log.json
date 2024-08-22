@@ -11,21 +11,18 @@ for TOPIC in $TOPICS
 do
   echo "Topic: $TOPIC"
   
-  # Get the partitions for each topic
-  PARTITIONS=$(kafka-topics.sh --bootstrap-server $BOOTSTRAP_SERVER --describe --topic $TOPIC | grep "Partition:" | awk '{print $2}')
+  # Fetch the log directory information for each topic
+  LOG_DIR_INFO=$(kafka-log-dirs.sh --bootstrap-server $BOOTSTRAP_SERVER --describe --topic-list $TOPIC)
 
-  # Iterate over each partition
-  for PARTITION in $PARTITIONS
+  # Extract partition and high watermark offset information
+  echo "$LOG_DIR_INFO" | grep -E 'Partition:|Offset:' | while read -r line1; read -r line2
   do
-    # Fetch the log directory information for each partition
-    LOG_DIR_INFO=$(kafka-log-dirs.sh --bootstrap-server $BOOTSTRAP_SERVER --describe --topic-list $TOPIC --partitions $PARTITION | grep -A 6 $PARTITION)
-    
-    # Extract the last modified timestamp (high water mark offset time)
-    LAST_MODIFIED=$(echo "$LOG_DIR_INFO" | grep "Offset:" | awk '{print $3}')
-    
-    # Convert the high watermark offset time to human-readable format
-    LAST_MODIFIED_HUMAN=$(date -d @$((LAST_MODIFIED/1000)) +"%Y-%m-%d %H:%M:%S")
-    
+    PARTITION=$(echo $line1 | awk '{print $2}')
+    OFFSET=$(echo $line2 | awk '{print $3}')
+
+    # Convert the high watermark offset time to human-readable format (if it represents a timestamp)
+    LAST_MODIFIED_HUMAN=$(date -d @$((OFFSET/1000)) +"%Y-%m-%d %H:%M:%S")
+
     echo "Partition: $PARTITION - Last Modified: $LAST_MODIFIED_HUMAN"
   done
 
