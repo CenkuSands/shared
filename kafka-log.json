@@ -1,8 +1,8 @@
 #!/bin/bash
 
-# Set Kafka home directory and topic name
+# Set Kafka home directory and broker address
 KAFKA_HOME="/path/to/kafka"
-TOPIC="your_topic"
+BROKER="localhost:9092"
 LOG_DIR="/path/to/kafka/logs"
 
 # Function to extract the last offset timestamp from a log segment file
@@ -18,14 +18,22 @@ get_last_offset_timestamp() {
          END {print "Last Offset:", last_offset, "Timestamp:", last_timestamp}'
 }
 
-# Iterate over all partitions in the topic
-for partition_dir in $LOG_DIR/$TOPIC-*; do
-    # Get the latest log segment file for the partition
-    latest_log_file=$(ls -t $partition_dir/*.log | head -1)
-    
-    if [ -n "$latest_log_file" ]; then
-        get_last_offset_timestamp $latest_log_file
-    else
-        echo "No log files found for partition $partition_dir"
-    fi
+# Get all topics from the Kafka broker
+topics=$($KAFKA_HOME/bin/kafka-topics.sh --list --bootstrap-server $BROKER)
+
+# Iterate over each topic
+for topic in $topics; do
+    echo "Processing topic: $topic"
+
+    # Iterate over all partitions in the topic
+    for partition_dir in $LOG_DIR/$topic-*; do
+        # Get the latest log segment file for the partition
+        latest_log_file=$(ls -t $partition_dir/*.log 2>/dev/null | head -1)
+
+        if [ -n "$latest_log_file" ]; then
+            get_last_offset_timestamp $latest_log_file
+        else
+            echo "No log files found for partition $partition_dir"
+        fi
+    done
 done
