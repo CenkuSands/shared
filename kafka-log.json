@@ -1,43 +1,31 @@
 #!/bin/bash
 
-# Kafka binaries path
-KAFKA_HOME="/path/to/kafka/bin"
+# Set Kafka home directory and topic name
+KAFKA_HOME="/path/to/kafka"
+TOPIC="your_topic"
+LOG_DIR="/path/to/kafka/logs"
 
-# Kafka broker address
-BROKER="localhost:9092"
+# Function to extract the last offset timestamp from a log segment file
+get_last_offset_timestamp() {
+    local log_file=$1
+    echo "Processing log file: $log_file"
 
-# Function to get the last log timestamp of a topic
-get_last_update_date() {
-  local topic=$1
-
-  # Get the partitions for the topic
-  partitions=$($KAFKA_HOME/kafka-topics.sh --describe --topic $topic --bootstrap-server $BROKER | grep "Partition:" | awk '{print $2}')
-
-  last_update_timestamp=0
-
-  # Loop through each partition and get the offset timestamp
-  for partition in $partitions; do
-    # Get the latest offset timestamp using offsetsForTimes
-    timestamp=$($KAFKA_HOME/kafka-run-class.sh kafka.tools.GetOffsetShell --broker-list $BROKER --time -1 --topic $topic --partition $partition | awk -F: '{print $3}')
-
-    if [[ $timestamp -gt $last_update_timestamp ]]; then
-      last_update_timestamp=$timestamp
-    fi
-  done
-
-  # Convert the timestamp to a human-readable date
-  if [[ $last_update_timestamp -gt 0 ]]; then
-    date -d @$((last_update_timestamp / 1000))
-  else
-    echo "No updates found"
-  fi
+    # Use kafka-dump-log.sh to find the last record's offset and timestamp
+    $KAFKA_HOME/bin/kafka-dump-log.sh --files $log_file --print-data-log --deep-iteration | \
+    awk 'BEGIN {last_offset=""; last_timestamp=""}
+         /offset:/{last_offset=$2}
+         /CreateTime:/{last_timestamp=$2}
+         END {print "Last Offset:", last_offset, "Timestamp:", last_timestamp}'
 }
 
-# Get all topics
-topics=$($KAFKA_HOME/kafka-topics.sh --list --bootstrap-server $BROKER)
-
-echo "Last update date for each topic:"
-for topic in $topics; do
-  echo -n "$topic: "
-  get_last_update_date $topic
+# Iterate over all partitions in the topic
+for partition_dir in $LOG_DIR/$TOPIC-*; do
+    # Get the latest log segment file for the partition
+    latest_log_file=$(ls -t $partition_dir/*.log | head -1)
+    
+    if [ -n "$latest_log_file" ]; then
+        get_last_offset_timestamp $latest_log_file
+    else
+        echo "No log files found for partition $partition_dir"
+    fi
 done
