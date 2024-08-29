@@ -4,6 +4,9 @@
 KAFKA_HOME="/path/to/kafka"
 BROKER="localhost:9092"
 
+# Number of partitions to use when recreating topics
+PARTITIONS=3  # Adjust this number as needed
+
 # File containing the list of topics to delete and recreate
 TOPIC_LIST_FILE="topics_to_process.txt"
 
@@ -13,14 +16,10 @@ if [ ! -f "$TOPIC_LIST_FILE" ]; then
     exit 1
 fi
 
-# Iterate over each line in the file and process the topics
-while IFS= read -r line; do
-    # Extract topic name and partitions from the line
-    topic=$(echo $line | awk '{print $1}')
-    partitions=$(echo $line | awk '{print $2}')
-
-    if [ -n "$topic" ] && [ -n "$partitions" ]; then
-        echo "Processing topic: $topic with $partitions partitions"
+# Iterate over each topic in the file and process it
+while IFS= read -r topic; do
+    if [ -n "$topic" ]; then
+        echo "Processing topic: $topic"
 
         # Delete the topic
         $KAFKA_HOME/bin/kafka-topics.sh --delete --topic "$topic" --bootstrap-server "$BROKER"
@@ -32,14 +31,14 @@ while IFS= read -r line; do
         fi
 
         # Recreate the topic with the specified number of partitions
-        $KAFKA_HOME/bin/kafka-topics.sh --create --topic "$topic" --partitions "$partitions" --replication-factor 1 --bootstrap-server "$BROKER"
+        $KAFKA_HOME/bin/kafka-topics.sh --create --topic "$topic" --partitions "$PARTITIONS" --replication-factor 1 --bootstrap-server "$BROKER"
         if [ $? -eq 0 ]; then
-            echo "Successfully recreated topic: $topic with $partitions partitions"
+            echo "Successfully recreated topic: $topic with $PARTITIONS partitions"
         else
             echo "Failed to recreate topic: $topic"
         fi
     else
-        echo "Invalid line in file: $line"
+        echo "Skipping empty line"
     fi
 done < "$TOPIC_LIST_FILE"
 
