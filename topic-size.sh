@@ -16,3 +16,33 @@ for file in Update-*; do
     # Rename the file
     mv "$file" "$new_file"
 done
+
+
+input {
+    file {
+        path => "/mnt/kafka-topic-state/*.csv"  # Path to the mounted CSV files
+        start_position => "beginning"
+        sincedb_path => "/dev/null"
+        codec => plain {
+            charset => "UTF-8"
+        }
+    }
+}
+
+filter {
+    csv {
+        separator => ","
+        columns => ["date", "topic", "size"]  # Define the columns as per your CSV file
+    }
+    mutate {
+        convert => { "size" => "integer" }  # Convert 'size' field to integer
+    }
+}
+
+output {
+    elasticsearch {
+        hosts => ["http://10.112.75.75:9200"]  # Elasticsearch server
+        index => "kafka-topic-size-%{+YYYY.MM.dd}"
+    }
+    stdout { codec => rubydebug }  # Optional: Debug output to console
+}
