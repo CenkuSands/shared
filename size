@@ -1,281 +1,145 @@
-@timestamp per day	Sum of size
-8/1/2023	300.47
-8/2/2023	303.6
-8/3/2023	281.61
-8/4/2023	284.84
-8/5/2023	303.74
-8/6/2023	321.01
-8/7/2023	324.92
-8/8/2023	328.96
-8/9/2023	335.29
-8/10/2023	300.28
-8/11/2023	297.82
-8/12/2023	322.83
-8/13/2023	333.51
-8/14/2023	331.05
-8/15/2023	323.35
-8/16/2023	329.59
-8/17/2023	302.72
-8/18/2023	311.15
-8/19/2023	328.02
-8/20/2023	351.1
-8/21/2023	358.9
-8/22/2023	349.08
-8/23/2023	351.89
-8/24/2023	308.3
-8/25/2023	323.9
-8/26/2023	345.63
-8/27/2023	357.76
-8/28/2023	352.5
-8/29/2023	350.98
-8/30/2023	351.01
-8/31/2023	314.5
-9/1/2023	310.26
-9/2/2023	313.45
-9/3/2023	320.09
-9/4/2023	318.45
-9/5/2023	331.82
-9/6/2023	330.53
-9/7/2023	305.82
-9/8/2023	304.07
-9/9/2023	329.48
-9/10/2023	353.84
-9/11/2023	356.46
-9/12/2023	363.56
-9/13/2023	350.03
-9/14/2023	327.88
-9/15/2023	341.1
-9/16/2023	365.08
-9/17/2023	383.81
-9/18/2023	366.43
-9/19/2023	363.13
-9/20/2023	363.92
-9/21/2023	334.39
-9/22/2023	353.94
-9/23/2023	355.37
-9/24/2023	372.53
-9/25/2023	371.23
-9/26/2023	377.1
-9/27/2023	375.88
-9/28/2023	330.11
-9/29/2023	337.44
-9/30/2023	367.46
-10/1/2023	400.92
-10/2/2023	409.98
-10/3/2023	407.66
-10/4/2023	411.71
-10/5/2023	375.62
-10/6/2023	385.1
-10/7/2023	385.58
-10/8/2023	394.01
-10/9/2023	389.12
-10/10/2023	395.53
-10/11/2023	394.27
-10/12/2023	348.3
-10/13/2023	370.12
-10/14/2023	395.54
-10/15/2023	419.62
-10/16/2023	411.5
-10/17/2023	396.51
-10/18/2023	395.8
-10/19/2023	366.49
-10/20/2023	385.81
-10/21/2023	412.77
-10/22/2023	411.49
-10/23/2023	411.88
-10/24/2023	412.85
-10/25/2023	416.8
-10/26/2023	385.44
-10/27/2023	394.23
-10/28/2023	403.45
-10/29/2023	425.46
-10/30/2023	424.12
-10/31/2023	419.23
-11/1/2023	419.53
-11/2/2023	389.32
-11/3/2023	406.41
-11/4/2023	426.7
-11/5/2023	429.27
-11/6/2023	413.21
-11/7/2023	408.36
-11/8/2023	411.05
-11/9/2023	382.27
-11/10/2023	390.82
-11/11/2023	406.03
-11/12/2023	425.5
-11/13/2023	416.86
-11/14/2023	417.66
-11/15/2023	420.38
-11/16/2023	386.45
-11/17/2023	405.46
-11/18/2023	422.7
-11/19/2023	435.65
-11/20/2023	436.38
-11/21/2023	424.28
-11/22/2023	428.56
-11/23/2023	401.21
-11/24/2023	417.27
-11/25/2023	436.96
-11/26/2023	458.25
-11/27/2023	443.16
-11/28/2023	438.62
-11/29/2023	431.74
-11/30/2023	407.06
-12/1/2023	430.31
-12/2/2023	435.25
-12/3/2023	455.68
-12/4/2023	446.48
-12/5/2023	442.79
-12/6/2023	445.52
-12/7/2023	410.79
-12/8/2023	429.54
-12/9/2023	451.24
-12/10/2023	466.66
-12/11/2023	460.87
-12/12/2023	475.27
-12/13/2023	464.68
-12/14/2023	433.25
-12/15/2023	434.49
-12/16/2023	453.59
-12/17/2023	475.24
-12/18/2023	467.62
-12/19/2023	448.53
-12/20/2023	448.94
-12/21/2023	425.95
-12/22/2023	438.46
-12/23/2023	463.87
-12/24/2023	482.49
-12/25/2023	467.46
-12/26/2023	475.76
-12/27/2023	479.54
-12/28/2023	450.99
-12/29/2023	463.64
-12/30/2023	477.3
-12/31/2023	499.79
-1/1/2024	497.47
-1/2/2024	496.55
-1/3/2024	477.96
-1/4/2024	444.44
-1/5/2024	463.4
-1/6/2024	482.85
-1/7/2024	498.65
-1/8/2024	491.46
-1/9/2024	490.58
-1/10/2024	498.28
-1/11/2024	469.05
-1/12/2024	480.97
-1/13/2024	509
-1/14/2024	532.86
-1/15/2024	520.92
-1/16/2024	515.66
-1/17/2024	519.03
-1/18/2024	475.96
-1/19/2024	497.23
-1/20/2024	514.92
-1/21/2024	539.22
-1/22/2024	527.28
-1/23/2024	525.03
-1/24/2024	529.41
-1/25/2024	480.3
-1/26/2024	502.88
-1/27/2024	525.75
-1/28/2024	540.68
-1/29/2024	535.61
-1/30/2024	522.24
-1/31/2024	528.69
-2/1/2024	494.39
-2/2/2024	509.9
-2/3/2024	524.52
-2/4/2024	541.19
-2/5/2024	524.73
-2/6/2024	518.72
-2/7/2024	518.01
-2/8/2024	474.38
-2/9/2024	484.81
-2/10/2024	506.8
-2/11/2024	531.09
-2/12/2024	543.72
-2/13/2024	564.67
-2/14/2024	571.16
-2/15/2024	561.62
-2/16/2024	575.12
-2/17/2024	599.84
-2/18/2024	604.61
-2/19/2024	577.41
-2/20/2024	584.26
-2/21/2024	585.58
-2/22/2024	543.58
-2/23/2024	554.17
-2/24/2024	576.87
-2/25/2024	586.76
-2/26/2024	572.9
-2/27/2024	578.49
-2/28/2024	565.15
-2/29/2024	531.72
-3/1/2024	559.98
-3/2/2024	589.6
-3/3/2024	600.42
-3/4/2024	580
-3/5/2024	582.59
-3/6/2024	577.58
-3/7/2024	549.52
-3/8/2024	569.57
-3/9/2024	599.31
-3/10/2024	597.82
-3/11/2024	584
-3/12/2024	584.14
-3/13/2024	579.21
-3/14/2024	544.75
-3/15/2024	561.15
-3/16/2024	588.47
-3/17/2024	607.99
-3/18/2024	597.02
-3/19/2024	595.28
-3/20/2024	578.38
-3/21/2024	552.87
-3/22/2024	574.22
-3/23/2024	601.29
-3/24/2024	610.51
-3/25/2024	598.16
-3/26/2024	601.05
-3/27/2024	600.9
-3/28/2024	583.3
-3/29/2024	596.97
-3/30/2024	632.74
-3/31/2024	658.63
-4/1/2024	650.58
-4/2/2024	643.44
-4/3/2024	636.14
-4/4/2024	610.29
-4/5/2024	626.72
-4/6/2024	652.49
-4/7/2024	650.77
-4/8/2024	632.51
-4/9/2024	637.07
-4/10/2024	622.87
-4/11/2024	589.94
-4/12/2024	613.62
-4/13/2024	644.95
-4/14/2024	670.39
-4/15/2024	651.36
-4/16/2024	667.06
-4/17/2024	664.32
-4/18/2024	643.86
-4/19/2024	663.82
-4/20/2024	692.06
-4/21/2024	704.91
-4/22/2024	699.51
-4/23/2024	713.27
-4/24/2024	703.18
-4/25/2024	655.56
-4/26/2024	678.69
-4/27/2024	709.51
-4/28/2024	736.09
-4/29/2024	716.75
-4/30/2024	736.24
-5/1/2024	759.44
-5/2/2024	734.54
-5/3/2024	753.09
-5/4/2024	779.1
-5/5/2024	775.88
-5/6/2024	750.01
+2023-02-13 00:00:00,CLE.Audit.Log.PRD , 17959023119
+2023-02-13 00:00:00,CLE.Exception.Log.PRD , 10563364
+2023-02-13 00:00:00,DeadLetter.CLE.Audit.Log.PRD , 0
+2023-02-13 00:00:00,DeadLetter.CLE.Exception.Log.PRD , 0
+2023-02-13 00:00:00,DeadLetter.CLE.SCL.Log.PRD , 870601717
+2023-02-13 00:00:00,DeadLetter.SCL.OperaConsolidatedEvent.PRD , 93587
+2023-02-13 00:00:00,DeadLetter.SCL.OperaConsolidatedEventDW.PRD , 0
+2023-02-13 00:00:00,DeadLetter.SCL.PRD , 2031221
+2023-02-13 00:00:00,HealthCheck.SCL.Generic , 3049348872
+2023-02-13 00:00:00,SCL.PRD.E.CardSwipe , 3331088086
+2023-02-13 00:00:00,SCL.PRD.G.ChipperDefinitionsInfo , 370084169
+2023-02-13 00:00:00,SCL.PRD.G.PatronSweepstakes , 13541256862
+2023-02-13 00:00:00,SCL.PRD.G.PatronSweepstakes.Rekey.ReTS , 9573385698
+2023-02-13 00:00:00,SCL.PRD.G.PatronSweepstakes.Rekey.ReTS.Cur , 4972141304
+2023-02-13 00:00:00,SCL.PRD.G.PatronTITO , 2294972121
+2023-02-13 00:00:00,SCL.PRD.G.PromotionPlatform.EnrolledPromo.Explode , 975119252
+2023-02-13 00:00:00,SCL.PRD.G.PromotionPlatform.EnrolledPromo.Explode.Reserialize , 947110678
+2023-02-13 00:00:00,SCL.PRD.G.PromotionPlatform.Fulfillment.Sweepstake , 2045156296
+2023-02-13 00:00:00,SCL.PRD.G.RouletteDefinitionsInfo , 98170077
+2023-02-13 00:00:00,SCL.PRD.G.SicboDefinitionsInfo , 759267161
+2023-02-13 00:00:00,SCL.PRD.G.TableOpenClose , 1485221225
+2023-02-13 00:00:00,SCL.PRD.H.OXIEvents , 5503358823
+2023-02-13 00:00:00,SCL.PRD.H.OperaConsolidatedEvents , 14446250782
+2023-02-13 00:00:00,SCL.PRD.H.Reservation , 79048763
+2023-02-13 00:00:00,SCL.PRD.M.CAR.Count.Table , 0
+2023-02-13 00:00:00,SCL.PRD.M.CARJournal , 472271324
+2023-02-13 00:00:00,SCL.PRD.M.CARPatronPersonalDetail , 33912762
+2023-02-13 00:00:00,SCL.PRD.M.CommunicationServiceQueue , 0
+2023-02-13 00:00:00,SCL.PRD.M.DataPlatformPatronCard , 19375570
+2023-02-13 00:00:00,SCL.PRD.M.EWalletPayment , 25883912
+2023-02-13 00:00:00,SCL.PRD.M.PosTransaction , 5105074888
+2023-02-13 00:00:00,SCL.PRD.M.PromotionPlatform.DeletedFOEL , 956742
+2023-02-13 00:00:00,SCL.PRD.M.PromotionPlatform.DeletedFOEL.Missions , 957572
+2023-02-13 00:00:00,SCL.PRD.M.PromotionPlatform.EnrolledPromo , 1019215081
+2023-02-13 00:00:00,SCL.PRD.M.PromotionPlatform.FOEL , 88867256
+2023-02-13 00:00:00,SCL.PRD.M.PromotionPlatform.FOEL.Communication , 0
+2023-02-13 00:00:00,SCL.PRD.M.PromotionPlatform.FOEL.Count.Table , 15781
+2023-02-13 00:00:00,SCL.PRD.M.PromotionPlatform.FOEL.Missions , 87439129
+2023-02-13 00:00:00,SCL.PRD.M.PromotionPlatform.FOELNotificationHistory , 0
+2023-02-13 00:00:00,SCL.PRD.M.PromotionPlatform.FOELNotificationHistory.Count.Table , 0
+2023-02-13 00:00:00,SCL.PRD.M.PromotionPlatform.GeneralTrigger , 2001177820
+2023-02-13 00:00:00,SCL.PRD.M.PromotionPlatform.GeneralTrigger.Unenrollment , 5538889
+2023-02-13 00:00:00,SCL.PRD.M.PromotionPlatform.NonFOELNotificationHistory , 0
+2023-02-13 00:00:00,SCL.PRD.M.PromotionPlatform.NonFOELNotificationHistory.Count.Table , 0
+2023-02-13 00:00:00,SCL.PRD.M.PromotionPlatform.OutcomePromo , 2274263366
+2023-02-13 00:00:00,SCL.PRD.M.PromotionPlatform.OutcomePromo.Bridge , 105180651
+2023-02-13 00:00:00,SCL.PRD.M.PromotionPlatform.PatronEnrollTrigger , 0
+2023-02-13 00:00:00,SCL.PRD.M.PromotionPlatform.PatronOffers , 438657269
+2023-02-13 00:00:00,SCL.PRD.M.PromotionPlatform.PatronPromotions , 3203160250
+2023-02-13 00:00:00,SCL.PRD.M.PromotionPlatform.Promotions , 93024
+2023-02-13 00:00:00,SCL.PRD.M.RealTimeNotificationOutcome , 636830334
+2023-02-13 00:00:00,SCL.PRD.M.RealTimeNotificationOutcomeHistory , 0
+2023-02-13 00:00:00,SCL.PRD.M.RealTimeNotificationRuleTriggerLog , 3035618223
+2023-02-13 00:00:00,SCL.PRD.M.RealTimeNotificationTriggerLog , 12862614596
+2023-02-13 00:00:00,SCL.PRD.M.Redemptions , 869137672
+2023-02-13 00:00:00,SCL.PRD.P.HotelCheckInOut , 439056730
+2023-02-13 00:00:00,SCL.PRD.P.LoyaltyCard , 167746435
+2023-02-13 00:00:00,SCL.PRD.P.LoyaltyCardPlus , 909795746
+2023-02-13 00:00:00,SCL.PRD.P.PatronCodedinfo , 486070536
+2023-02-13 00:00:00,SCL.PRD.P.PatronPINNotification , 12780441
+2023-02-13 00:00:00,SCL.PRD.P.PatronPersonalDetails , 449739055
+2023-02-13 00:00:00,SCL.PRD.P.PatronPointTransaction , 4555035116
+2023-02-13 00:00:00,SCL.PRD.PM.MulesoftApplicationCache , 80811573
+2023-02-13 00:00:00,VAL.PRD.Producer , 1096
+2023-02-13 00:00:00,WarmUp.PRD.Event , 0
+2023-02-13 00:00:00,__consumer_offsets , 1558509376
+2023-02-13 00:00:00,__transaction_state , 1881774842
+2023-02-13 00:00:00,_confluent-command , 2621
+2023-02-13 00:00:00,_confluent-controlcenter-7-1-1-SCL_PROD-AlertHistoryStore-changelog , 0
+2023-02-13 00:00:00,_confluent-controlcenter-7-1-1-SCL_PROD-AlertHistoryStore-repartition , 0
+2023-02-13 00:00:00,_confluent-controlcenter-7-1-1-SCL_PROD-Group-ONE_MINUTE-changelog , 684299619
+2023-02-13 00:00:00,_confluent-controlcenter-7-1-1-SCL_PROD-Group-ONE_MINUTE-repartition , 0
+2023-02-13 00:00:00,_confluent-controlcenter-7-1-1-SCL_PROD-Group-THREE_HOURS-changelog , 456557214
+2023-02-13 00:00:00,_confluent-controlcenter-7-1-1-SCL_PROD-Group-THREE_HOURS-repartition , 0
+2023-02-13 00:00:00,_confluent-controlcenter-7-1-1-SCL_PROD-KSTREAM-OUTEROTHER-0000000106-store-changelog , 132891363
+2023-02-13 00:00:00,_confluent-controlcenter-7-1-1-SCL_PROD-KSTREAM-OUTEROTHER-0000000106-store-repartition , 0
+2023-02-13 00:00:00,_confluent-controlcenter-7-1-1-SCL_PROD-KSTREAM-OUTERTHIS-0000000105-store-changelog , 1720409018
+2023-02-13 00:00:00,_confluent-controlcenter-7-1-1-SCL_PROD-KSTREAM-OUTERTHIS-0000000105-store-repartition , 0
+2023-02-13 00:00:00,_confluent-controlcenter-7-1-1-SCL_PROD-MetricsAggregateStore-changelog , 8532993713
+2023-02-13 00:00:00,_confluent-controlcenter-7-1-1-SCL_PROD-MetricsAggregateStore-repartition , 57193155046
+2023-02-13 00:00:00,_confluent-controlcenter-7-1-1-SCL_PROD-MonitoringMessageAggregatorWindows-ONE_MINUTE-changelog , 16585353
+2023-02-13 00:00:00,_confluent-controlcenter-7-1-1-SCL_PROD-MonitoringMessageAggregatorWindows-ONE_MINUTE-repartition , 25292778
+2023-02-13 00:00:00,_confluent-controlcenter-7-1-1-SCL_PROD-MonitoringMessageAggregatorWindows-THREE_HOURS-changelog , 22524981
+2023-02-13 00:00:00,_confluent-controlcenter-7-1-1-SCL_PROD-MonitoringMessageAggregatorWindows-THREE_HOURS-repartition , 24994227
+2023-02-13 00:00:00,_confluent-controlcenter-7-1-1-SCL_PROD-MonitoringStream-ONE_MINUTE-changelog , 2057542469
+2023-02-13 00:00:00,_confluent-controlcenter-7-1-1-SCL_PROD-MonitoringStream-ONE_MINUTE-repartition , 703190432
+2023-02-13 00:00:00,_confluent-controlcenter-7-1-1-SCL_PROD-MonitoringStream-THREE_HOURS-changelog , 833375067
+2023-02-13 00:00:00,_confluent-controlcenter-7-1-1-SCL_PROD-MonitoringStream-THREE_HOURS-repartition , 707817855
+2023-02-13 00:00:00,_confluent-controlcenter-7-1-1-SCL_PROD-MonitoringTriggerStore-changelog , 0
+2023-02-13 00:00:00,_confluent-controlcenter-7-1-1-SCL_PROD-MonitoringTriggerStore-repartition , 0
+2023-02-13 00:00:00,_confluent-controlcenter-7-1-1-SCL_PROD-MonitoringVerifierStore-changelog , 875019341
+2023-02-13 00:00:00,_confluent-controlcenter-7-1-1-SCL_PROD-MonitoringVerifierStore-repartition , 0
+2023-02-13 00:00:00,_confluent-controlcenter-7-1-1-SCL_PROD-TriggerActionsStore-changelog , 0
+2023-02-13 00:00:00,_confluent-controlcenter-7-1-1-SCL_PROD-TriggerActionsStore-repartition , 0
+2023-02-13 00:00:00,_confluent-controlcenter-7-1-1-SCL_PROD-TriggerEventsStore-changelog , 0
+2023-02-13 00:00:00,_confluent-controlcenter-7-1-1-SCL_PROD-TriggerEventsStore-repartition , 0
+2023-02-13 00:00:00,_confluent-controlcenter-7-1-1-SCL_PROD-actual-group-consumption-rekey , 955882397
+2023-02-13 00:00:00,_confluent-controlcenter-7-1-1-SCL_PROD-aggregate-topic-partition-store-changelog , 2428322711
+2023-02-13 00:00:00,_confluent-controlcenter-7-1-1-SCL_PROD-aggregate-topic-partition-store-repartition , 0
+2023-02-13 00:00:00,_confluent-controlcenter-7-1-1-SCL_PROD-aggregatedTopicPartitionTableWindows-ONE_MINUTE-changelog , 1108509832
+2023-02-13 00:00:00,_confluent-controlcenter-7-1-1-SCL_PROD-aggregatedTopicPartitionTableWindows-ONE_MINUTE-repartition , 681504777
+2023-02-13 00:00:00,_confluent-controlcenter-7-1-1-SCL_PROD-aggregatedTopicPartitionTableWindows-THREE_HOURS-changelog , 843910174
+2023-02-13 00:00:00,_confluent-controlcenter-7-1-1-SCL_PROD-aggregatedTopicPartitionTableWindows-THREE_HOURS-repartition , 680009504
+2023-02-13 00:00:00,_confluent-controlcenter-7-1-1-SCL_PROD-cluster-rekey , 0
+2023-02-13 00:00:00,_confluent-controlcenter-7-1-1-SCL_PROD-expected-group-consumption-rekey , 73167468
+2023-02-13 00:00:00,_confluent-controlcenter-7-1-1-SCL_PROD-group-aggregate-store-ONE_MINUTE-changelog , 31490617
+2023-02-13 00:00:00,_confluent-controlcenter-7-1-1-SCL_PROD-group-aggregate-store-ONE_MINUTE-repartition , 0
+2023-02-13 00:00:00,_confluent-controlcenter-7-1-1-SCL_PROD-group-aggregate-store-THREE_HOURS-changelog , 49767387
+2023-02-13 00:00:00,_confluent-controlcenter-7-1-1-SCL_PROD-group-aggregate-store-THREE_HOURS-repartition , 0
+2023-02-13 00:00:00,_confluent-controlcenter-7-1-1-SCL_PROD-group-stream-extension-rekey , 3295067925
+2023-02-13 00:00:00,_confluent-controlcenter-7-1-1-SCL_PROD-metrics-trigger-measurement-rekey , 2103607560
+2023-02-13 00:00:00,_confluent-controlcenter-7-1-1-SCL_PROD-monitoring-aggregate-rekey-store-changelog , 10514290310
+2023-02-13 00:00:00,_confluent-controlcenter-7-1-1-SCL_PROD-monitoring-aggregate-rekey-store-repartition , 0
+2023-02-13 00:00:00,_confluent-controlcenter-7-1-1-SCL_PROD-monitoring-message-rekey-store , 5642627065
+2023-02-13 00:00:00,_confluent-controlcenter-7-1-1-SCL_PROD-monitoring-trigger-event-rekey , 393510125
+2023-02-13 00:00:00,_confluent-ksql-default__command_topic , 333637
+2023-02-13 00:00:00,_confluent-ksql-default_query_CST_SCL_PRD_G_PATRONSWEEPSTAKES_REKEY_RETS_CUR_TAB_23-KsqlTopic-Reduce-changelog , 569947561
+2023-02-13 00:00:00,_confluent-ksql-default_query_CST_SCL_PRD_M_PROMOTIONPLATFORM_ENROLLEDPROMO_EXPLODE_TAB_29-KsqlTopic-Reduce-changelog , 693714695
+2023-02-13 00:00:00,_confluent-ksql-default_query_CTAS_SCL_PRD_M_PROMOTIONPLATFORM_ENROLLEDPROMO_EXPLODE_RESERIALIZE_TAB_31-KsqlTopic-Reduce-changelog , 693412149
+2023-02-13 00:00:00,_confluent-ksql-default_query_CTAS_SCL_PRD_M_PROMOTIONPLATFORM_FOELNOTIFICATIONHISTORY_COUNT_TABLE_59-Aggregate-Aggregate-Materialize-changelog , 0
+2023-02-13 00:00:00,_confluent-ksql-default_query_CTAS_SCL_PRD_M_PROMOTIONPLATFORM_FOELNOTIFICATIONHISTORY_COUNT_TABLE_59-Aggregate-GroupBy-repartition , 0
+2023-02-13 00:00:00,_confluent-ksql-default_query_CTAS_SCL_PRD_M_PROMOTIONPLATFORM_FOEL_COUNT_TABLE_53-Aggregate-Aggregate-Materialize-changelog , 17829
+2023-02-13 00:00:00,_confluent-ksql-default_query_CTAS_SCL_PRD_M_PROMOTIONPLATFORM_FOEL_COUNT_TABLE_53-Aggregate-GroupBy-repartition , 16182012
+2023-02-13 00:00:00,_confluent-ksql-default_query_CTAS_SCL_PRD_M_PROMOTIONPLATFORM_FULFILLMENT_SWEEPSTAKE_TAB_33-KTABLE-FK-JOIN-SUBSCRIPTION-REGISTRATION-0000000012-topic , 340541146
+2023-02-13 00:00:00,_confluent-ksql-default_query_CTAS_SCL_PRD_M_PROMOTIONPLATFORM_FULFILLMENT_SWEEPSTAKE_TAB_33-KTABLE-FK-JOIN-SUBSCRIPTION-RESPONSE-0000000020-topic , 73092082
+2023-02-13 00:00:00,_confluent-ksql-default_query_CTAS_SCL_PRD_M_PROMOTIONPLATFORM_FULFILLMENT_SWEEPSTAKE_TAB_33-KTABLE-FK-JOIN-SUBSCRIPTION-STATE-STORE-0000000016-changelog , 406536509
+2023-02-13 00:00:00,_confluent-ksql-default_query_CTAS_SCL_PRD_M_PROMOTIONPLATFORM_FULFILLMENT_SWEEPSTAKE_TAB_33-KafkaTopic_Left-Reduce-changelog , 709944832
+2023-02-13 00:00:00,_confluent-ksql-default_query_CTAS_SCL_PRD_M_PROMOTIONPLATFORM_FULFILLMENT_SWEEPSTAKE_TAB_33-KafkaTopic_Right-Reduce-changelog , 569187137
+2023-02-13 00:00:00,_confluent-ksql-default_query_CTAS_SCL_PRD_M_PROMOTIONPLATFORM_FULFILLMENT_SWEEPSTAKE_TAB_33-Project-Last-changelog , 1501624278
+2023-02-13 00:00:00,_confluent-ksql-default_query_CTAS_SCL_PRD_M_PROMOTIONPLATFORM_NONFOELNOTIFICATIONHISTORY_COUNT_TABLE_51-Aggregate-Aggregate-Materialize-changelog , 0
+2023-02-13 00:00:00,_confluent-ksql-default_query_CTAS_SCL_PRD_M_PROMOTIONPLATFORM_NONFOELNOTIFICATIONHISTORY_COUNT_TABLE_51-Aggregate-GroupBy-repartition , 0
+2023-02-13 00:00:00,_confluent-metadata-auth , 1039760
+2023-02-13 00:00:00,_confluent-metrics , 54572997039
+2023-02-13 00:00:00,_confluent-monitoring , 1954858028
+2023-02-13 00:00:00,_confluent-secrets , 676
+2023-02-13 00:00:00,_confluent-telemetry-metrics , 3643341543
+2023-02-13 00:00:00,_confluent_balancer_api_state , 2321
+2023-02-13 00:00:00,_confluent_balancer_broker_samples , 464983
+2023-02-13 00:00:00,_confluent_balancer_partition_samples , 2128775
+2023-02-13 00:00:00,_schemas , 137970
+2023-02-13 00:00:00,confluent-audit-log-events , 10030887293
+2023-02-13 00:00:00,connect-cluster-configs , 202921
+2023-02-13 00:00:00,connect-cluster-offsets , 2306031
+2023-02-13 00:00:00,connect-cluster-status , 63813
+2023-02-13 00:00:00,deadRemarks , 1414
