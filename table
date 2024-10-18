@@ -1,16 +1,37 @@
-| Query | Test 1 - Value | Test 1  index - value | Test 2 - Value | Test 2 - index value | Test 3 - value | Test 3 - index value | Test 4 - value | Test 4 - index value | Test 5 - value | Test 5 -index value | Test 6 - value | Test 6 - index value | Test 7 - value | Test 7 - index value | Test 8 - value | Test 8 - index value | Test 9 value | Test 9 - index value | Test 10 value | Test 10 - index value |
-| ----- | -------------- | --------------------- | -------------- | -------------------- | -------------- | -------------------- | -------------- | -------------------- | -------------- | ------------------- | -------------- | -------------------- | -------------- | -------------------- | -------------- | -------------------- | ------------ | -------------------- | ------------- | --------------------- |
-| Q1.1  | 50             | 36                    | 46             | 40                   | 50             | 36                   | 43             | 36                   | 36             | 43                  | 36             | 33                   | 36             | 33                   | 40             | 40                   | 40           | 36                   | 43            | 36                    |
-| Q1.2  | 40             | 23                    | 30             | 26                   | 33             | 30                   | 30             | 20                   | 30             | 20                  | 26             | 20                   | 23             | 30                   | 30             | 23                   | 23           | 26                   | 30            | 26                    |
-| Q1.3  | 50             | 30                    | 40             | 33                   | 40             | 36                   | 40             | 36                   | 36             | 40                  | 36             | 30                   | 33             | 36                   | 36             | 36                   | 33           | 33                   | 36            | 30                    |
-| Q2.1  | 150            | 113                   | 136            | 113                  | 140            | 113                  | 133            | 110                  | 130            | 116                 | 130            | 110                  | 133            | 113                  | 133            | 113                  | 130          | 116                  | 140           | 110                   |
-| Q2.2  | 126            | 80                    | 116            | 80                   | 120            | 76                   | 106            | 76                   | 106            | 80                  | 106            | 80                   | 110            | 73                   | 103            | 73                   | 103          | 73                   | 110           | 80                    |
-| Q2.3  | 96             | 70                    | 90             | 66                   | 83             | 73                   | 83             | 70                   | 83             | 70                  | 76             | 66                   | 86             | 70                   | 80             | 70                   | 80           | 66                   | 80            | 66                    |
-| Q3.1  | 160            | 193                   | 153            | 183                  | 143            | 186                  | 143            | 193                  | 140            | 200                 | 146            | 206                  | 146            | 186                  | 143            | 193                  | 146          | 200                  | 140           | 186                   |
-| Q3.2  | 136            | 100                   | 120            | 96                   | 116            | 93                   | 120            | 96                   | 116            | 100                 | 116            | 96                   | 120            | 93                   | 120            | 100                  | 120          | 100                  | 116           | 96                    |
-| Q3.3  | 106            | 66                    | 106            | 60                   | 103            | 60                   | 103            | 60                   | 100            | 63                  | 96             | 63                   | 100            | 56                   | 100            | 63                   | 96           | 66                   | 96            | 56                    |
-| Q3.4  | 50             | 40                    | 53             | 36                   | 43             | 36                   | 50             | 40                   | 40             | 40                  | 43             | 40                   | 40             | 40                   | 40             | 43                   | 40           | 40                   | 40            | 36                    |
-| Q4.1  | 173            | 176                   | 160            | 166                  | 160            | 170                  | 160            | 163                  | 153            | 166                 | 150            | 170                  | 156            | 163                  | 156            | 173                  | 156          | 170                  | 156           | 166                   |
-| Q4.2  | 83             | 83                    | 86             | 90                   | 83             | 93                   | 83             | 86                   | 83             | 93                  | 76             | 83                   | 80             | 90                   | 80             | 86                   | 76           | 86                   | 76            | 80                    |
-| Q4.3  | 70             | 63                    | 73             | 56                   | 70             | 66                   | 66             | 60                   | 66             | 60                  | 66             | 60                   | 63             | 56                   | 63             | 60                   | 63           | 63                   | 60            | 60                    |
-| Total | 1290           | 1073                  | 1209           | 1045                 | 1184           | 1068                 | 1160           | 1046                 | 1119           | 1091                | 1103           | 1057                 | 1126           | 1039                 | 1124           | 1073                 | 1106         | 1075                 | 1123          | 1028                  |
+input {
+    file {
+        path => "/path/to/your/csv/files/*.csv"  # The path to your CSV file(s)
+        start_position => "beginning"
+        sincedb_path => "/dev/null"  # Ensures Logstash reads the file from the beginning each time
+        codec => plain {
+            charset => "UTF-8"
+        }
+    }
+}
+
+filter {
+    csv {
+        separator => ","  # Your CSV uses a comma to separate fields
+        columns => ["timestamp", "topic", "size"]  # Define the columns for your CSV data
+    }
+    
+    # Convert the 'size' field to an integer (as it represents a size)
+    mutate {
+        convert => { "size" => "integer" }
+    }
+
+    # Optionally, if you want to convert timestamp to an Elasticsearch-friendly format
+    date {
+        match => ["timestamp", "yyyy-MM-dd HH:mm:ss"]
+        target => "@timestamp"
+        remove_field => ["timestamp"]  # Optional: Remove the original timestamp field if you want
+    }
+}
+
+output {
+    elasticsearch {
+        hosts => ["http://localhost:9200"]  # Elasticsearch server (adjust IP if needed)
+        index => "kafka-topics-%{+YYYY.MM.dd}"  # Customize your index name
+    }
+    stdout { codec => rubydebug }  # Debug output to console
+}
