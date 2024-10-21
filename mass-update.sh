@@ -1,38 +1,58 @@
 #!/bin/bash
 
 # Configuration
+USER=${USER}                             # The current system username or a custom one you pass
 ORG_URL="http://your_server:8080/tfs"    # Azure DevOps Server URL
 COLLECTION="DefaultCollection"           # Collection name (organization equivalent)
-PAT="your_personal_access_token"         # Personal Access Token
+PAT="your_personal_access_token"         # Personal Access Token (PAT) for authentication
 API_VERSION="6.0"
 YAML_FILE_PATH="path/to/your_file.yaml"  # Path to the YAML file inside each repo
-COMMIT_MESSAGE="Updated APM_ELASTIC_STACK_TRACE in YAML"
+COMMIT_MESSAGE="Updated APM_ELASTIC_STACK_TRACE in YAML by $USER"
 BRANCH="refs/heads/master"               # Branch name where changes should be pushed
 TMP_FILE="./your_file.yaml"              # Temporary local copy of the YAML file
+TMP_REFS="./refs.json"                   # Temporary file to store refs information
+
+# Log the current user performing the operation
+echo "Starting the operation as user: $USER"
 
 # Get the list of projects in the collection
-echo "Fetching list of projects in collection..."
-PROJECTS=$(curl -s -u ":$PAT" \
+echo "Fetching list of projects in collection as user: $USER..."
+PROJECTS=$(curl -s -u "$USER:$PAT" \
     "$ORG_URL/$COLLECTION/_apis/projects?api-version=$API_VERSION" \
     | jq -r '.value[] | .name')
 
 # Loop through each project
 for PROJECT in $PROJECTS; do
-    echo "Processing project: $PROJECT"
+    echo "Processing project: $PROJECT as user: $USER..."
 
     # Get the list of repositories for the current project
-    REPOS=$(curl -s -u ":$PAT" \
+    REPOS=$(curl -s -u "$USER:$PAT" \
         "$ORG_URL/$COLLECTION/$PROJECT/_apis/git/repositories?api-version=$API_VERSION" \
         | jq -r '.value[] | .name, .webUrl')
 
     # Loop through each repository in the current project
     while IFS= read -r REPO_NAME && IFS= read -r REPO_URL; do
-        echo "Processing repository: $REPO_NAME in project: $PROJECT"
+        echo "Processing repository: $REPO_NAME in project: $PROJECT as user: $USER..."
+
+        # Fetch all refs for the repository
+        echo "Fetching branch information for repository: $REPO_NAME..."
+        curl -s -u "$USER:$PAT" \
+          "$ORG_URL/$COLLECTION/$PROJECT/_apis/git/repositories/$REPO_NAME/refs?api-version=$API_VERSION" \
+          -o "$TMP_REFS"
+
+        # Use jq to extract the objectId for the specific branch (e.g., master)
+        OLD_OBJECT_ID=$(cat "$TMP_REFS" | jq -r --arg BRANCH "$BRANCH" '.value[] | select(.name == $BRANCH) | .objectId')
+
+        # Check if the branch was found
+        if [ -z "$OLD_OBJECT_ID" ]; then
+            echo "Branch $BRANCH not found in repository: $REPO_NAME"
+            continue
+        fi
 
         # Download the YAML file from the repository
         FILE_DOWNLOAD_URL="$ORG_URL/$COLLECTION/$PROJECT/_apis/git/repositories/$REPO_NAME/items?path=$YAML_FILE_PATH&api-version=$API_VERSION"
-        echo "Downloading the YAML file from $REPO_NAME..."
-        curl -u ":$PAT" -s \
+        echo "Downloading the YAML file from $REPO_NAME as user: $USER..."
+        curl -u "$USER:$PAT" -s \
             "$FILE_DOWNLOAD_URL" \
             -o "$TMP_FILE"
 
@@ -48,11 +68,6 @@ for PROJECT in $PROJECTS; do
 
         # Encode the file content in Base64 to push it back
         BASE64_CONTENT=$(base64 "$TMP_FILE")
-
-        # Get the current branch's oldObjectId (required for pushing)
-        OLD_OBJECT_ID=$(curl -s -u ":$PAT" \
-            "$ORG_URL/$COLLECTION/$PROJECT/_apis/git/repositories/$REPO_NAME/refs?filter=$BRANCH&api-version=$API_VERSION" \
-            | jq -r '.value[0].objectId')
 
         # Create a JSON payload for pushing the updated file
         cat <<EOF > payload.json
@@ -84,18 +99,18 @@ for PROJECT in $PROJECTS; do
 EOF
 
         # Push the changes back to the repository
-        echo "Pushing the modified file back to the repository: $REPO_NAME..."
-        curl -u ":$PAT" \
+        echo "Pushing the modified file back to the repository: $REPO_NAME as user: $USER..."
+        curl -u "$USER:$PAT" \
             -H "Content-Type: application/json" \
             -X POST \
             --data-binary @payload.json \
             "$ORG_URL/$COLLECTION/$PROJECT/_apis/git/repositories/$REPO_NAME/pushes?api-version=$API_VERSION"
 
         # Clean up temporary files
-        rm -f "$TMP_FILE" payload.json
+        rm -f "$TMP_FILE" "$TMP_REFS" payload.json
 
     done <<< "$REPOS"
 
 done
 
-echo "Operation completed."
+echo "Operation completed by user: $USER."
