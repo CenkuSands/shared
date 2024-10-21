@@ -4,7 +4,9 @@
 USER=${USER}                             # The current system username or a custom one you pass
 ORG_URL="http://your_server:8080/tfs"    # Azure DevOps Server URL
 COLLECTION="DefaultCollection"           # Collection name (organization equivalent)
-PAT="your_personal_access_token"         # Personal Access Token (PAT) for authentication
+PAT="your_personal_access_token"         # Personal Access Token (PAT) for the main user (to create the PR)
+REVIEWER_PAT="your_reviewer_pat"         # Personal Access Token (PAT) for the reviewer account (to approve the PR)
+REVIEWER_ACCOUNT="your_reviewer_username" # The username or email of the reviewer account
 API_VERSION="6.0"
 DEVELOP_BRANCH="refs/heads/develop"      # The branch you are merging from (develop)
 MAIN_BRANCH="refs/heads/main"            # The branch you are merging to (main)
@@ -47,7 +49,11 @@ while IFS= read -r REPO_NAME && IFS= read -r REPO_URL; do
   "targetRefName": "$MAIN_BRANCH",
   "title": "Auto Merge from Develop to Main by $USER",
   "description": "This PR merges changes from the develop branch to the main branch",
-  "reviewers": []
+  "reviewers": [
+    {
+      "id": "$REVIEWER_ACCOUNT"
+    }
+  ]
 }
 EOF
 )
@@ -60,6 +66,26 @@ EOF
         continue
     else
         echo "Pull Request $PR_ID created for repository: $REPO_NAME"
+    fi
+
+    # Use the reviewer account to approve the Pull Request
+    echo "Approving Pull Request $PR_ID for repository: $REPO_NAME using reviewer account: $REVIEWER_ACCOUNT..."
+    APPROVAL_RESPONSE=$(curl -s -u "$REVIEWER_ACCOUNT:$REVIEWER_PAT" \
+      -X PATCH \
+      -H "Content-Type: application/json" \
+      -d @- "$ORG_URL/$COLLECTION/$PROJECT/_apis/git/repositories/$REPO_NAME/pullRequests/$PR_ID/reviewers/$REVIEWER_ACCOUNT?api-version=$API_VERSION" <<EOF
+{
+  "vote": 10   # 10 indicates approval
+}
+EOF
+)
+
+    # Check if the approval was successful
+    if [ "$(echo "$APPROVAL_RESPONSE" | jq -r '.vote')" == "10" ]; then
+        echo "Pull Request $PR_ID successfully approved by $REVIEWER_ACCOUNT"
+    else
+        echo "Failed to approve Pull Request $PR_ID for repository: $REPO_NAME"
+        continue
     fi
 
     # Complete (Merge) the Pull Request automatically
