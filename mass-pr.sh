@@ -74,4 +74,20 @@ EOF
     "commitId": "$(echo "$PR_RESPONSE" | jq -r '.lastMergeSourceCommit.commitId')"
   },
   "completionOptions": {
-    "deleteSourceBranch": false, 
+    "deleteSourceBranch": false,   # Set to true if you want to delete the develop branch after merging
+    "mergeStrategy": "squash"      # Options: "noFastForward", "rebase", "rebaseMerge", "squash"
+  }
+}
+EOF
+)
+
+    # Check if the merge was successful
+    if [ "$(echo "$MERGE_RESPONSE" | jq -r '.status')" == "completed" ]; then
+        echo "Pull Request $PR_ID successfully merged for repository: $REPO_NAME"
+    else
+        echo "Failed to merge Pull Request $PR_ID for repository: $REPO_NAME"
+    fi
+
+done <<< "$REPOS"
+
+echo "Pull Requests and merges completed for project: $PROJECT."
