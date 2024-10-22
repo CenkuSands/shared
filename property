@@ -13,3 +13,21 @@ $base64Guid = [Convert]::ToBase64String($guidBytes)
 
 # Output the Base64 encoded GUID
 $base64Guid
+
+
+
+
+# Step 1: Define the string representation of the GUID
+$guidString = "801707f1-f391-4b42-8ec9-b0a4b936c4bd"
+
+# Step 2: Convert the string GUID to a .NET Guid object
+$guidObject = [Guid]::Parse($guidString)
+
+# Step 3: Convert the GUID to a byte array
+$guidBytes = $guidObject.ToByteArray()
+
+# Step 4: Convert the byte array to a Base64 string
+$base64Guid = [Convert]::ToBase64String($guidBytes)
+
+# Output the Base64-encoded GUID
+Write-Host "Base64-encoded GUID: $base64Guid"
