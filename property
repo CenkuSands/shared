@@ -31,3 +31,24 @@ $base64Guid = [Convert]::ToBase64String($guidBytes)
 
 # Output the Base64-encoded GUID
 Write-Host "Base64-encoded GUID: $base64Guid"
+
+
+
+
+
+
+curl --location --request POST 'https://devops.venetianqa.local/DevOpsCollection/comp-control/_apis/git/repositories/comp-api/pullRequests?api-version=6.0' \
+-u cen.ku:xxxxxx  \
+--header 'Content-Type: application/json' \
+--data-raw '{
+  "sourceRefName": "refs/heads/develop",
+  "targetRefName": "refs/heads/main",
+  "title": "Auto Merge from Develop to Main by cen.ku",
+  "description": "This PR merges changes from the develop branch to the main branch",
+  "reviewers": [
+    {
+      "id": "8QcXgJHzQkuOybCkuTbEvQ=="
+    }
+  ]
+}
+'
