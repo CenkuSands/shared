@@ -117,3 +117,7 @@ EOF
 done <<< "$REPOS"
 
 echo "Pull Requests and merges completed for project: $PROJECT."
+
+
+Error:
+{"$id":"1","innerException":null,"message":"Invalid argument value.\r\nParameter name: The identity paul.wong is not recognized.","typeName":"Microsoft.TeamFoundation.SourceControl.WebServer.InvalidArgumentValueException, Microsoft.TeamFoundation.SourceControl.WebServer","typeKey":"InvalidArgumentValueException","errorCode":0,"eventId":0}[
