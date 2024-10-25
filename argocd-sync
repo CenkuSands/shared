@@ -1,0 +1,29 @@
+#!/bin/bash
+
+NAMESPACE="qa-vms"  # Set the target namespace
+ARGOCD_SERVER="argocd-server-url"  # Your Argo CD server URL, if needed for login
+ARGOCD_USERNAME="your-username"    # Your Argo CD username, if login is required
+ARGOCD_PASSWORD="your-password"    # Your Argo CD password, if login is required
+
+# Optional: Login to Argo CD if not already authenticated
+# argocd login $ARGOCD_SERVER --username $ARGOCD_USERNAME --password $ARGOCD_PASSWORD --insecure
+
+# Retrieve the list of application names in the specified namespace
+APP_NAMES=$(argocd app list -o json | jq -r --arg ns "$NAMESPACE" '.[] | select(.spec.destination.namespace == $ns) | .metadata.name')
+
+# Check if any applications were found
+if [ -z "$APP_NAMES" ]; then
+    echo "No applications found in namespace: $NAMESPACE"
+    exit 1
+fi
+
+# Loop through each application name, refresh, and sync
+for APP in $APP_NAMES; do
+    echo "Refreshing application: $APP"
+    argocd app refresh $APP
+
+    echo "Syncing application: $APP"
+    argocd app sync $APP
+done
+
+echo "Mass refresh and sync completed for namespace: $NAMESPACE"
