@@ -9,12 +9,12 @@ if [ -z "$NAMESPACE" ]; then
     exit 1
 fi
 
-ARGOCD_SERVER="argocd-server-url"  # Your Argo CD server URL, if needed for login
-ARGOCD_USERNAME="your-username"    # Your Argo CD username, if login is required
-ARGOCD_PASSWORD="your-password"    # Your Argo CD password, if login is required
+argoPass=$(oc get secret/openshift-gitops-cluster -n openshift-gitops -o jsonpath='{.data.admin\.password}' | base64 -d)
+argoURL=$(oc get route openshift-gitops-server -n openshift-gitops -o jsonpath='{.spec.host}{"\n"}')
+
 
 # Optional: Login to Argo CD if not already authenticated
-# argocd login $ARGOCD_SERVER --username $ARGOCD_USERNAME --password $ARGOCD_PASSWORD --insecure
+# argocd login --insecure --grpc-web $argoURL --username admin --password $argoPass
 
 # Retrieve the list of application names in the specified namespace
 APP_NAMES=$(argocd app list -o json | jq -r --arg ns "$NAMESPACE" '.[] | select(.spec.destination.namespace == $ns) | .metadata.name')
