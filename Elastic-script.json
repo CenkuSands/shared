@@ -1,0 +1,27 @@
+{
+  "size": 0,
+  "aggs": {
+    "daily_growth": {
+      "date_histogram": {
+        "field": "datetime",
+        "calendar_interval": "day"
+      },
+      "aggs": {
+        "total_size": {
+          "sum": {
+            "field": "size (bytes)"
+          }
+        },
+        "growth_rate": {
+          "bucket_script": {
+            "buckets_path": {
+              "previous_day": "_previous_bucket",
+              "current_day": "total_size"
+            },
+            "script": "(params.current_day - params.previous_day) / params.previous_day * 100"
+          }
+        }
+      }
+    }
+  }
+}
