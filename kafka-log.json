@@ -1,4 +1,24 @@
-I1111 07:08:03.665086       1 wrapper.go:120] "Starting kube-state-metrics"
-W1111 07:08:03.665389       1 client_config.go:659] Neither --kubeconfig nor --master was specified.  Using the inClusterConfig.  This might not work.
-W1111 07:08:03.665439       1 client_config.go:664] error creating inClusterConfig, falling back to default config: open /var/run/secrets/kubernetes.io/serviceaccount/token: no such file or directory
-E1111 07:08:03.665575       1 wrapper.go:40] "Failed to run kube-state-metrics" err="failed to build config from flags: invalid configuration: no configuration has been provided, try setting KUBERNETES_MASTER environment variable"
+I1111 07:24:30.995049       1 wrapper.go:120] "Starting kube-state-metrics"
+W1111 07:24:30.995351       1 client_config.go:659] Neither --kubeconfig nor --master was specified.  Using the inClusterConfig.  This might not work.
+I1111 07:24:30.995661       1 server.go:212] "Used default resources"
+I1111 07:24:30.995703       1 types.go:227] "Using all namespaces"
+I1111 07:24:30.995718       1 types.go:145] "Using node type is nil"
+I1111 07:24:30.995733       1 server.go:245] "Metric allow-denylisting" allowDenyStatus="Excluding the following lists that were on denylist: "
+W1111 07:24:30.995753       1 client_config.go:659] Neither --kubeconfig nor --master was specified.  Using the inClusterConfig.  This might not work.
+I1111 07:24:30.996814       1 utils.go:72] "Tested communication with server"
+I1111 07:24:31.006558       1 utils.go:77] "Run with Kubernetes cluster version" major="1" minor="27" gitVersion="v1.27.13+fd36fb9" gitTreeState="clean" gitCommit="d2902897cdc913a1bf6bc548ce26f8a427ef9b76" platform="linux/amd64"
+I1111 07:24:31.006583       1 utils.go:78] "Communication with server successful"
+I1111 07:24:31.007128       1 server.go:372] "Started metrics server" metricsServerAddress="[::]:8080"
+I1111 07:24:31.007173       1 metrics_handler.go:99] "Autosharding disabled"
+I1111 07:24:31.007393       1 server.go:78] levelinfomsgListening onaddress[::]:8080
+I1111 07:24:31.007457       1 server.go:78] levelinfomsgTLS is disabled.http2falseaddress[::]:8080
+I1111 07:24:31.007179       1 server.go:361] "Started kube-state-metrics self metrics server" telemetryAddress="[::]:8081"
+I1111 07:24:31.007906       1 server.go:78] levelinfomsgListening onaddress[::]:8081
+I1111 07:24:31.007916       1 server.go:78] levelinfomsgTLS is disabled.http2falseaddress[::]:8081
+W1111 07:24:31.044389       1 reflector.go:547] pkg/mod/k8s.io/client-go@v0.30.3/tools/cache/reflector.go:232: failed to list *v1.CertificateSigningRequest: certificatesigningrequests.certificates.k8s.io is forbidden: User "system:serviceaccount:elastic:kube-state-metrics" cannot list resource "certificatesigningrequests" in API group "certificates.k8s.io" at the cluster scope
+E1111 07:24:31.044532       1 reflector.go:150] pkg/mod/k8s.io/client-go@v0.30.3/tools/cache/reflector.go:232: Failed to watch *v1.CertificateSigningRequest: failed to list *v1.CertificateSigningRequest: certificatesigningrequests.certificates.k8s.io is forbidden: User "system:serviceaccount:elastic:kube-state-metrics" cannot list resource "certificatesigningrequests" in API group "certificates.k8s.io" at the cluster scope
+I1111 07:24:31.044915       1 builder.go:282] "Active resources" activeStoreNames="certificatesigningrequests,configmaps,cronjobs,daemonsets,deployments,endpoints,horizontalpodautoscalers,ingresses,jobs,leases,limitranges,mutatingwebhookconfigurations,namespaces,networkpolicies,nodes,persistentvolumeclaims,persistentvolumes,poddisruptionbudgets,pods,replicasets,replicationcontrollers,resourcequotas,secrets,services,statefulsets,storageclasses,validatingwebhookconfigurations,volumeattachments"
+W1111 07:24:31.048873       1 reflector.go:547] pkg/mod/k8s.io/client-go@v0.30.3/tools/cache/reflector.go:232: failed to list *v1.ConfigMap: configmaps is forbidden: User "system:serviceaccount:elastic:kube-state-metrics" cannot list resource "configmaps" in API group "" at the cluster scope
+E1111 07:24:31.048909       1 reflector.go:150] pkg/mod/k8s.io/client-go@v0.30.3/tools/cache/reflector.go:232: Failed to watch *v1.ConfigMap: failed to list *v1.ConfigMap: configmaps is forbidden: User "system:serviceaccount:elastic:kube-state-metrics" cannot list resource "configmaps" in API group "" at the cluster scope
+W1111 07:24:31.048960       1 reflector.go:547] pkg/mod/k8s.io/client-go@v0.30.3/tools/cache/reflector.go:232: failed to list *v1.CronJob: cronjobs.batch is forbidden: User "system:serviceaccount:elastic:kube-state-metrics" cannot list resource "cronjobs" in API group "batch" at the cluster scope
+E1111 07:24:31.048969       1 reflector.go:150] pkg/mod/k8s.io/client-go@v0.30.3/tools/cache/reflector.go:232: Failed to watch *v1.CronJob: failed to list *v1.CronJob: cronjobs.batch is forbidden: User "system:serviceaccount:elastic:kube-state-metrics" cannot list resource "cronjobs" in API group "batch" at the cluster scope
