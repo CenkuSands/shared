@@ -1,0 +1,45 @@
+apiVersion: flowcontrol.apiserver.k8s.io/v1beta3
+kind: PriorityLevelConfiguration
+metadata:
+  name: aqua-kube-enforcer-priority
+spec:
+  type: Limited
+  limited:
+    assuredConcurrencyShares: 5  # Adjust based on desired concurrency
+    queues: 3  # Number of queues to distribute requests
+    handSize: 3  # Number of queues to sample when dispatching a request
+    queueLengthLimit: 50  # Maximum number of requests per queue
+    borrowingLimitPercent: 10  # Allow up to 10% of unused concurrency shares to be borrowed
+    lendablePercent: 0  # No lending of concurrency shares to other priority levels
+    limitResponse:
+      type: Queue  # Ensure the limit type is set to Queue
+      queuing:
+        queues: 3  # Fix: Required value defining the number of queues
+        handSize: 3  # Fix: Required value controlling queue selection randomness
+        queueLengthLimit: 50  # Fix: Required max queue length per queue
+
+---
+apiVersion: flowcontrol.apiserver.k8s.io/v1beta3
+kind: FlowSchema
+metadata:
+  name: aqua-kube-enforcer-flowschema
+spec:
+  priorityLevelConfiguration:
+    name: aqua-kube-enforcer-priority
+  matchingPrecedence: 100
+  distinguisherMethod:
+    type: ByUser
+  rules:
+    - subjects:
+        - kind: ServiceAccount
+          serviceAccount:
+            name: aqua-kube-enforcer-sa  # Confirm this matches your Aqua service account
+            namespace: aqua  # Confirm this matches your namespace
+      resourceRules:
+        - verbs: ["create", "update", "patch", "delete", "get", "list", "watch"]
+          apiGroups: ["*"]
+          resources: ["*"]
+          namespaces: ["aqua"]  # Fix: Required field to specify namespace
+      nonResourceRules:
+        - verbs: ["get"]
+          nonResourceURLs: ["/healthz", "/readyz"]
