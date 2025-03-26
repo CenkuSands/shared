@@ -36,3 +36,7 @@ Runtime statistics by host
  VDQVKSQLAPPS02.venetianqa.local:8088 | consumer-total-messages          |       9206 | 2025-03-26T08:54:24.745Z
 -----------------------------------------------------------------------------------------------------------------
 (Statistics of the local KSQL server interaction with the Kafka topic SCL.QA2.P.PatronPointBalance)
+
+
+"syntax = \"proto3\";\npackage scl.events.PatronPointBalance;\n\nimport \"google/protobuf/timestamp.proto\";\nimport \"google/protobuf/wrappers.proto\";\nimport \"SCL/Common/Protobuf/EventHeader.proto\";\n\noption java_package = \"com.scl.events.patronPointBalance\";\noption java_outer_classname = \"PatronPointBalanceEventProto\";\noption java_multiple_files = true;\noption csharp_namespace = \"SCL.Events.Models.PatronPointBalance\";\n\nmessage PatronPointBalanceEvent {\n  .scl.events.common.protobuf.EventHeader header = 1;\n  .google.protobuf.StringValue patron_id = 2;\n  .scl.events.PatronPointBalance.Rewards Rewards = 3;\n}\nmessage Rewards {\n  .google.protobuf.StringValue reward_type = 1;\n  .scl.events.PatronPointBalance.CurrentBalance current_balance = 2;\n  .google.protobuf.Timestamp start_date = 3;\n  .google.protobuf.Timestamp end_date = 4;\n}\nmessage CurrentBalance {\n  .google.protobuf.FloatValue balance = 1;\n  .google.protobuf.Timestamp last_update_date = 2;\n}\n"
+
