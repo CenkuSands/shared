@@ -1,0 +1,38 @@
+ksql> describe SCL_QA2_P_PATRONPOINTBALANCE extended;
+
+Name                 : SCL_QA2_P_PATRONPOINTBALANCE
+Type                 : STREAM
+Timestamp field      : Not set - using <ROWTIME>
+Key format           : KAFKA
+Value format         : PROTOBUF
+Kafka topic          : SCL.QA2.P.PatronPointBalance (partitions: 3, replication: 3)
+Statement            : CREATE STREAM SCL_QA2_P_PATRONPOINTBALANCE (HEADER STRUCT<PATRON_ID STRING, TRANSACTION_DATE_TIME TIMESTAMP, GAMING_DATE TIMESTAMP, ENTERED_BY STRING, WORKSTATION STRING, PROPERTY_ID STRING, EVENT_TYPE STRING, EVENT_ID STRING, SOURCE_SYSTEM STRING, GAMING_DATE_STRING STRING>, PATRON_ID STRING, REWARDS STRUCT<REWARD_TYPE STRING, CURRENT_BALANCE STRUCT<BALANCE DOUBLE, LAST_UPDATE_DATE TIMESTAMP>, START_DATE TIMESTAMP, END_DATE TIMESTAMP>) WITH (KAFKA_TOPIC='SCL.QA2.P.PatronPointBalance', KEY_FORMAT='KAFKA', VALUE_FORMAT='PROTOBUF');
+
+ Field     | Type                                                                                                                                                                                                                            
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ HEADER    | STRUCT<PATRON_ID VARCHAR(STRING), TRANSACTION_DATE_TIME TIMESTAMP, GAMING_DATE TIMESTAMP, ENTERED_BY VARCHAR(STRING), WORKSTATION VARCHAR(STRING), PROPERTY_ID VARCHAR(STRING), EVENT_TYPE VARCHAR(STRING), EVENT_ID VARCHAR(STRING), SOURCE_SYSTEM VARCHAR(STRING), GAMING_DATE_STRING VARCHAR(STRING)>
+ PATRON_ID | VARCHAR(STRING)                                                                                                                                                                                                                 
+ REWARDS   | STRUCT<REWARD_TYPE VARCHAR(STRING), CURRENT_BALANCE STRUCT<BALANCE DOUBLE, LAST_UPDATE_DATE TIMESTAMP>, START_DATE TIMESTAMP, END_DATE TIMESTAMP>                                                                               
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Sources that have a DROP constraint on this source
+--------------------------------------------------
+SCL_QA2_P_PATRONPOINTBALANCE_AVRO
+
+Queries that read from this STREAM
+-----------------------------------
+CSAS_SCL_QA2_P_PATRONPOINTBALANCE_AVRO_2273 (RUNNING) : CREATE STREAM SCL_QA2_P_PATRONPOINTBALANCE_AVRO WITH (KAFKA_TOPIC='SCL.QA2.P.PatronPointBalance_AVRO', KEY_FORMAT='KAFKA', PARTITIONS=3, REPLICAS=3, VALUE_FORMAT='AVRO') AS SELECT * FROM SCL_QA2_P_PATRONPOINTBALANCE SCL_QA2_P_PATRONPOINTBALANCE PARTITION BY SCL_QA2_P_PATRONPOINTBALANCE.HEADER->PATRON_ID EMIT CHANGES;
+
+For query topology and execution plan please run: EXPLAIN <QueryId>
+
+Runtime statistics by host
+-------------------------
+ Host                                 | Metric                           | Value      | Last Message
+-----------------------------------------------------------------------------------------------------------------
+ VDQVKSQLAPPS02.venetianqa.local:8088 | consumer-failed-messages         |        735 | 2025-03-26T09:17:20.388Z
+ VDQVKSQLAPPS02.venetianqa.local:8088 | consumer-failed-messages-per-sec |          0 | 2025-03-26T09:17:20.388Z
+ VDQVKSQLAPPS02.venetianqa.local:8088 | consumer-messages-per-sec        |          0 | 2025-03-26T08:54:24.745Z
+ VDQVKSQLAPPS02.venetianqa.local:8088 | consumer-total-bytes             |    1609473 | 2025-03-26T08:54:24.745Z
+ VDQVKSQLAPPS02.venetianqa.local:8088 | consumer-total-messages          |       9206 | 2025-03-26T08:54:24.745Z
+-----------------------------------------------------------------------------------------------------------------
+(Statistics of the local KSQL server interaction with the Kafka topic SCL.QA2.P.PatronPointBalance)
