@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # Configuration
-USER="cen.ku"                             # The current system username or a custom one you pass
-ORG_URL="https://devops.venetianqa.local" # Azure DevOps Server URL
+USER="xxxxxxx"                             # The current system username or a custom one you pass
+ORG_URL="https://xxxx.xxxx.xxxx" # Azure DevOps Server URL
 COLLECTION="DevOpsCollection"             # Collection name (organization equivalent)
 PAT="xxxxx"                               # Personal Access Token (PAT) for authentication
 API_VERSION="6.0"
