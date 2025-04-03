@@ -1,32 +1,57 @@
 #!/bin/bash
 
-# Prompt for confluent login
-
-confluent login --url https://xxx.xx.xxx.xxx:8090 --ca-cert-path /var/ssl/private/root.pem
-
 # Hardcoded Cluster IDs (replace with your actual IDs)
-KAFKA_ID="KQey0SYmQ_uT6Vcq-0y9gA"       # Replace with your Kafka cluster ID
-SR_ID="schema-registry"                            # Replace with your Schema Registry cluster ID
-CONNECT_ID="connect-cluster"                  # Replace with your Connect cluster ID
-KSQL_ID="default_"                            # Replace with your ksqlDB cluster ID
-user_list=$(cat user-list.txt)
+KAFKA_ID="KQey0SYmQ_uT6Vcq-0y9gA"       # Your Kafka cluster ID
+SR_ID="schema-registry"                   # Your Schema Registry cluster ID
+CONNECT_ID="connect-cluster"              # Your Connect cluster ID
+KSQL_ID="default_"                        # Your ksqlDB cluster ID
 
-for USER in $user_list; do
+# File containing the list of users
+USER_FILE="user-list.txt"
 
-# List role bindings
-echo "=== Kafka Cluster ($KAFKA_ID) ==="
-confluent iam rbac role-binding list --kafka-cluster-id "$KAFKA_ID" --principal "User:$USER"
+# Check if user file exists
+if [ ! -f "$USER_FILE" ]; then
+    echo "Error: User file '$USER_FILE' not found."
+    exit 1
+fi
 
-echo "=== Schema Registry ($SR_ID) ==="
-confluent iam rbac role-binding list --kafka-cluster-id "$KAFKA_ID" --schema-registry-cluster-id "$SR_ID" --principal "User:$USER"
+# Perform Confluent login with error handling
+echo "Logging in to Confluent MDS..."
+confluent login --url https://xxx.xx.xxx.xxx:8090 --ca-cert-path /var/ssl/private/root.pem
+if [ $? -ne 0 ]; then
+    echo "Error: Confluent login failed. Check URL, certificate, or credentials."
+    exit 1
+fi
 
-echo "=== Connect ($CONNECT_ID) ==="
-confluent iam rbac role-binding list --kafka-cluster-id "$KAFKA_ID" --connect-cluster-id "$CONNECT_ID" --principal "User:$USER"
+# Read users from the file and process each
+while IFS= read -r USER; do
+    # Skip empty lines or comments
+    [[ -z "$USER" || "$USER" =~ ^# ]] && continue
 
-echo "=== ksqlDB ($KSQL_ID) ==="
-confluent iam rbac role-binding list --kafka-cluster-id "$KAFKA_ID" --ksql-cluster-id "$KSQL_ID" --principal "User:$USER"
+    # Assume USER is just the username; prepend "User:" if not already present
+    if [[ "$USER" != User:* && "$USER" != ServiceAccount:* ]]; then
+        PRINCIPAL="User:$USER"
+    else
+        PRINCIPAL="$USER"
+    fi
 
-echo "===================================================="
+    echo "Processing role assignments for $PRINCIPAL..."
+    echo "===================================================="
 
-done < "$user_list"
-echo "Done."
+    # List role bindings
+    echo "=== Kafka Cluster ($KAFKA_ID) ==="
+    confluent iam rbac role-binding list --kafka-cluster-id "$KAFKA_ID" --principal "$PRINCIPAL"
+
+    echo "=== Schema Registry ($SR_ID) ==="
+    confluent iam rbac role-binding list --kafka-cluster-id "$KAFKA_ID" --schema-registry-cluster-id "$SR_ID" --principal "$PRINCIPAL"
+
+    echo "=== Connect ($CONNECT_ID) ==="
+    confluent iam rbac role-binding list --kafka-cluster-id "$KAFKA_ID" --connect-cluster-id "$CONNECT_ID" --principal "$PRINCIPAL"
+
+    echo "=== ksqlDB ($KSQL_ID) ==="
+    confluent iam rbac role-binding list --kafka-cluster-id "$KAFKA_ID" --ksql-cluster-id "$KSQL_ID" --principal "$PRINCIPAL"
+
+    echo "===================================================="
+done < "$USER_FILE"
+
+echo "Done processing all users."
