@@ -41,7 +41,7 @@ fi
 # Map cluster type to cluster ID
 case "$CLUSTER_TYPE" in
     "Kafka") CLUSTER_ID="$KAFKA_ID"; CLUSTER_FLAG="--kafka-cluster-id" ;;
-    "Schema Registry") CLUSTER_ID="$KAFKA_ID"; CLUSTER_FLAG="--schema-registry-cluster-id"; EXTRA_FLAG="--kafka-cluster-id $KAFKA_ID" ;;
+    "Schema Registry") CLUSTER_ID="$SR_ID"; CLUSTER_FLAG="--schema-registry-cluster-id"; EXTRA_FLAG="--kafka-cluster-id $KAFKA_ID" ;;
     "Connect") CLUSTER_ID="$CONNECT_ID"; CLUSTER_FLAG="--connect-cluster-id"; EXTRA_FLAG="--kafka-cluster-id $KAFKA_ID" ;;
     "ksqlDB") CLUSTER_ID="$KSQL_ID"; CLUSTER_FLAG="--ksql-cluster-id"; EXTRA_FLAG="--kafka-cluster-id $KAFKA_ID" ;;
 esac
@@ -49,15 +49,15 @@ esac
 # Step 2: Select Resource Type
 echo "Select the resource type for $CLUSTER_TYPE:"
 case "$CLUSTER_TYPE" in
-    "Kafka") RESOURCE_TYPES=("Cluster" "Topic" "ConsumerGroup" "TransactionalId") ;;
-    "Schema Registry") RESOURCE_TYPES=("Subject" "Cluster") ;;
-    "Connect") RESOURCE_TYPES=("Connector" "Cluster") ;;
-    "ksqlDB") RESOURCE_TYPES=("KsqlCluster" "Cluster") ;;
+    "Kafka") RESOURCE_TYPES=("Cluster" "Topic" "Group" "TransactionalId") ;;
+    "Schema Registry") RESOURCE_TYPES=("Cluster" "Subject") ;;
+    "Connect") RESOURCE_TYPES=("Cluster" "Connector") ;;
+    "ksqlDB") RESOURCE_TYPES=("Cluster" "KsqlCluster") ;;
 esac
 RESOURCE_TYPE=$(select_from_menu "Choose a resource type" "${RESOURCE_TYPES[@]}")
 
 # Step 3: Input Resource Name
-read -p "Enter the resource name (e.g., my-topic, jdbc-sink, or 'kafka-cluster' for Cluster): " RESOURCE_NAME
+read -p "Enter the resource name (e.g., my-topic, my-group, or 'kafka-cluster' for Cluster): " RESOURCE_NAME
 if [ -z "$RESOURCE_NAME" ]; then
     echo "Error: Resource name cannot be empty."
     exit 1
@@ -68,18 +68,35 @@ echo "Select the role to assign:"
 ROLES=("SystemAdmin" "SecurityAdmin" "ClusterAdmin" "Operator" "ResourceOwner" "DeveloperRead" "DeveloperWrite" "DeveloperManage")
 ROLE=$(select_from_menu "Choose a role" "${ROLES[@]}")
 
-# Step 5: Input User Principal
-read -p "Enter the user principal (e.g., User:alice or ServiceAccount:12345): " PRINCIPAL
-if [ -z "$PRINCIPAL" ]; then
-    echo "Error: Principal cannot be empty."
-    exit 1
+# Step 5: Select Pattern Type (only if not Cluster)
+if [ "$RESOURCE_TYPE" != "Cluster" ]; then
+    echo "Select the pattern type for the resource name:"
+    PATTERN_TYPES=("LITERAL" "PREFIXED")
+    PATTERN_TYPE=$(select_from_menu "Choose a pattern type (LITERAL for exact match, PREFIXED for prefix match)" "${PATTERN_TYPES[@]}")
+else
+    PATTERN_TYPE="LITERAL"
+    echo "Pattern type set to LITERAL (required for Cluster resources)."
 fi
 
-# Step 6: Confirm and Execute
+# Step 6: Select Principal Type
+echo "Select the principal type:"
+PRINCIPAL_TYPES=("User" "Group")
+PRINCIPAL_TYPE=$(select_from_menu "Choose a principal type" "${PRINCIPAL_TYPES[@]}")
+
+# Step 7: Input Principal Name
+read -p "Enter the $PRINCIPAL_TYPE name (e.g., alice for User, developers for Group): " PRINCIPAL_NAME
+if [ -z "$PRINCIPAL_NAME" ]; then
+    echo "Error: Principal name cannot be empty."
+    exit 1
+fi
+PRINCIPAL="$PRINCIPAL_TYPE:$PRINCIPAL_NAME"
+
+# Step 8: Confirm and Execute
 echo "About to assign the following RBAC role:"
 echo "Cluster: $CLUSTER_TYPE ($CLUSTER_ID)"
 echo "Resource Type: $RESOURCE_TYPE"
 echo "Resource Name: $RESOURCE_NAME"
+echo "Pattern Type: $PATTERN_TYPE"
 echo "Role: $ROLE"
 echo "Principal: $PRINCIPAL"
 read -p "Confirm assignment? (y/n): " CONFIRM
@@ -93,6 +110,7 @@ CMD="confluent iam rbac role-binding create \
     --principal $PRINCIPAL \
     --role $ROLE \
     --resource $RESOURCE_TYPE:$RESOURCE_NAME \
+    --pattern-type $PATTERN_TYPE \
     $CLUSTER_FLAG $CLUSTER_ID"
 if [ -n "$EXTRA_FLAG" ]; then
     CMD="$CMD $EXTRA_FLAG"
