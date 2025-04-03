@@ -2,7 +2,7 @@
 
 # Prompt for confluent login
 
-confluent login --url https://10.112.75.38:8090 --ca-cert-path /var/ssl/private/root.pem
+confluent login --url https://xxx.xx.xxx.xxx:8090 --ca-cert-path /var/ssl/private/root.pem
 
 # Hardcoded Cluster IDs (replace with your actual IDs)
 KAFKA_ID="KQey0SYmQ_uT6Vcq-0y9gA"       # Replace with your Kafka cluster ID
