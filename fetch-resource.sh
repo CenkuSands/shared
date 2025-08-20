@@ -1,12 +1,10 @@
 #!/bin/bash
 
-# Check if namespace is provided
-if [ -z "$1" ]; then
-  echo "Usage: $0 <namespace>"
+# Check if namespaces are provided
+if [ $# -eq 0 ]; then
+  echo "Usage: $0 <namespace1> [<namespace2> ...]"
   exit 1
 fi
-
-NAMESPACE=$1
 
 # Check if oc is installed
 if ! command -v oc &> /dev/null; then
@@ -20,29 +18,29 @@ if ! oc whoami &> /dev/null; then
   exit 1
 fi
 
-# Fetch all deployments in the specified namespace
-DEPLOYMENTS=$(oc get deployments -n "$NAMESPACE" --no-headers -o custom-columns=":metadata.name")
+echo "Deployment Resource Configurations"
+printf "%-20s %-30s %-20s %-20s %-20s %-20s\n" "NAMESPACE" "DEPLOYMENT" "CPU_REQUEST" "CPU_LIMIT" "MEMORY_REQUEST" "MEMORY_LIMIT"
 
-if [ -z "$DEPLOYMENTS" ]; then
-  echo "No deployments found in namespace '$NAMESPACE'."
-  exit 0
-fi
+# Process each namespace provided as an argument
+for NAMESPACE in "$@"; do
+  # Fetch all deployments in the current namespace
+  DEPLOYMENTS=$(oc get deployments -n "$NAMESPACE" --no-headers -o custom-columns=":metadata.name" 2>/dev/null)
 
-echo "Deployment Resource Configurations in Namespace: $NAMESPACE"
-echo "-------------------------------------------------------------"
-printf "%-30s %-20s %-20s %-20s %-20s\n" "DEPLOYMENT" "CPU REQUEST" "CPU LIMIT" "MEMORY REQUEST" "MEMORY LIMIT"
-echo "-------------------------------------------------------------"
+  if [ -z "$DEPLOYMENTS" ]; then
+    echo "No deployments found in namespace '$NAMESPACE'."
+    continue
+  fi
 
-# Loop through each deployment
-while IFS= read -r DEPLOYMENT; do
-  # Fetch CPU and Memory requests/limits for the first container in the deployment
-  CPU_REQUEST=$(oc get deployment "$DEPLOYMENT" -n "$NAMESPACE" -o jsonpath='{.spec.template.spec.containers[0].resources.requests.cpu}' 2>/dev/null || echo "Not set")
-  CPU_LIMIT=$(oc get deployment "$DEPLOYMENT" -n "$NAMESPACE" -o jsonpath='{.spec.template.spec.containers[0].resources.limits.cpu}' 2>/dev/null || echo "Not set")
-  MEMORY_REQUEST=$(oc get deployment "$DEPLOYMENT" -n "$NAMESPACE" -o jsonpath='{.spec.template.spec.containers[0].resources.requests.memory}' 2>/dev/null || echo "Not set")
-  MEMORY_LIMIT=$(oc get deployment "$DEPLOYMENT" -n "$NAMESPACE" -o jsonpath='{.spec.template.spec.containers[0].resources.limits.memory}' 2>/dev/null || echo "Not set")
+  # Loop through each deployment in the namespace
+  while IFS= read -r DEPLOYMENT; do
+    # Fetch CPU and Memory requests/limits for the first container in the deployment
+    CPU_REQUEST=$(oc get deployment "$DEPLOYMENT" -n "$NAMESPACE" -o jsonpath='{.spec.template.spec.containers[0].resources.requests.cpu}' 2>/dev/null || echo "Not set")
+    CPU_LIMIT=$(oc get deployment "$DEPLOYMENT" -n "$NAMESPACE" -o jsonpath='{.spec.template.spec.containers[0].resources.limits.cpu}' 2>/dev/null || echo "Not set")
+    MEMORY_REQUEST=$(oc get deployment "$DEPLOYMENT" -n "$NAMESPACE" -o jsonpath='{.spec.template.spec.containers[0].resources.requests.memory}' 2>/dev/null || echo "Not set")
+    MEMORY_LIMIT=$(oc get deployment "$DEPLOYMENT" -n "$NAMESPACE" -o jsonpath='{.spec.template.spec.containers[0].resources.limits.memory}' 2>/dev/null || echo "Not set")
 
-  # Print the results in a formatted table
-  printf "%-30s %-20s %-20s %-20s %-20s\n" "$DEPLOYMENT" "$CPU_REQUEST" "$CPU_LIMIT" "$MEMORY_REQUEST" "$MEMORY_LIMIT"
-done <<< "$DEPLOYMENTS"
+    # Print the results in a formatted table, including the namespace
+    printf "%-20s %-30s %-20s %-20s %-20s %-20s\n" "$NAMESPACE" "$DEPLOYMENT" "$CPU_REQUEST" "$CPU_LIMIT" "$MEMORY_REQUEST" "$MEMORY_LIMIT"
+  done <<< "$DEPLOYMENTS"
+done
 
-echo "-------------------------------------------------------------"
