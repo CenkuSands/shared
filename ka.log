@@ -1,0 +1,31 @@
+[17:28:35 ERR] HandleMessage error: The SSL connection could not be established, see inner exception.
+System.Net.Http.HttpRequestException: The SSL connection could not be established, see inner exception.
+ ---> System.IO.IOException:  Received an unexpected EOF or 0 bytes from the transport stream.
+   at System.Net.Security.SslStream.<FillHandshakeBufferAsync>g__InternalFillHandshakeBufferAsync|189_0[TIOAdapter](TIOAdapter adap, ValueTask`1 task, Int32 minSize)
+   at System.Net.Security.SslStream.ReceiveBlobAsync[TIOAdapter](TIOAdapter adapter)
+   at System.Net.Security.SslStream.ForceAuthenticationAsync[TIOAdapter](TIOAdapter adapter, Boolean receiveFirst, Byte[] reAuthenticationData, Boolean isApm)
+   at System.Net.Http.ConnectHelper.EstablishSslConnectionAsync(SslClientAuthenticationOptions sslOptions, HttpRequestMessage request, Boolean async, Stream stream, CancellationToken cancellationToken)
+   --- End of inner exception stack trace ---
+   at System.Net.Http.ConnectHelper.EstablishSslConnectionAsync(SslClientAuthenticationOptions sslOptions, HttpRequestMessage request, Boolean async, Stream stream, CancellationToken cancellationToken)
+   at System.Net.Http.HttpConnectionPool.ConnectAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+   at System.Net.Http.HttpConnectionPool.CreateHttp11ConnectionAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+   at System.Net.Http.HttpConnectionPool.AddHttp11ConnectionAsync(HttpRequestMessage request)
+   at System.Threading.Tasks.TaskCompletionSourceWithCancellation`1.WaitWithCancellationAsync(CancellationToken cancellationToken)
+   at System.Net.Http.HttpConnectionPool.GetHttp11ConnectionAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+   at System.Net.Http.HttpConnectionPool.SendWithVersionDetectionAndRetryAsync(HttpRequestMessage request, Boolean async, Boolean doRequestAuth, CancellationToken cancellationToken)
+   at System.Net.Http.DiagnosticsHandler.SendAsyncCore(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+   at System.Net.Http.RedirectHandler.SendAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+   at Microsoft.Extensions.Http.Logging.LoggingHttpMessageHandler.SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+   at Microsoft.Extensions.Http.Logging.LoggingScopeHttpMessageHandler.SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+   at System.Net.Http.HttpClient.<SendAsync>g__Core|83_0(HttpRequestMessage request, HttpCompletionOption completionOption, CancellationTokenSource cts, Boolean disposeCts, CancellationTokenSource pendingRequestsCts, CancellationToken originalCancellationToken)
+   at GamingAngel.ServiceWrapper.AngelMultipleAPIServiceWrapperService.<>c__DisplayClass7_0`1.<<PostAsync>b__0>d.MoveNext() in /opt/app-root/src/GamingAngel.ServiceWrapper/AngelMultipleAPIServiceWrapperService.cs:line 70
+--- End of stack trace from previous location ---
+   at VML.NextGen.Polly.PollyPolicy.AsyncTracePolicy.DoImplementationAsync[TResult](Func`3 action, Context context, CancellationToken cancellationToken, Boolean continueOnCapturedContext)
+   at Polly.AsyncPolicy.ExecuteAsync[TResult](Func`3 action, Context context, CancellationToken cancellationToken, Boolean continueOnCapturedContext)
+   at GamingAngel.ServiceWrapper.AngelMultipleAPIServiceWrapperService.PostAsync[TRequest](HttpClient client, String propertyCode, TRequest request, CancellationToken cancellation) in /opt/app-root/src/GamingAngel.ServiceWrapper/AngelMultipleAPIServiceWrapperService.cs:line 76
+   at GamingAngel.ServiceWrapper.AngelMultipleAPIServiceWrapperService.PostAsync[TRequest](String propertyName, TRequest request, CancellationToken cancellation) in /opt/app-root/src/GamingAngel.ServiceWrapper/AngelMultipleAPIServiceWrapperService.cs:line 57
+   at GamingAngel.TableInventoryReq.Worker.MessageHandlers.AbstractProtoTableInventoryRequestMessageHandler.HandleMessageAsync(ProtoTableInventory message, IDictionary`2 messageProperties, CancellationToken cancellationToken) in /opt/app-root/src/GamingAngel.TableInventoryReq.Worker/MessageHandlers/AbstractProtoTableInventoryRequestMessageHandler.cs:line 36
+   at GamingAngel.Domain.MessageHandlers.AbstractMultipleProtoMessageHandler`1.HandleMessageAsync(EventMessage`2 message, CancellationToken cancellationToken) in /opt/app-root/src/GamingAngel.Domain/MessageHandlers/AbstractMultipleProtoMessageHandler.cs:line 89
+   at VML.NextGen.Messaging.HostedServices.ConsumerBackgroundService`3.<>c__DisplayClass14_0.<<-ctor>b__1>d.MoveNext() in /azp/agent/_work/24/s/src/VML.NextGen.Messaging/HostedServices/ConsumerBackgroundService.cs:line 74
+--- End of stack trace from previous location ---
+   at VML.NextGen.Kafka.Adapters.BusinessLogicExecutor`2.ProcessMessage(ConsumedMessageContext`2 msgCtx, Int32 sessionTimeoutMs, CancellationToken stoppingToken) in /azp/agent/_work/24/s/src/VML.NextGen.Kafka/Adapters/BusinessLogicExecutor.cs:line 44
