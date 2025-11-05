@@ -1,100 +1,92 @@
-import requests
 import json
-from typing import Dict, List, Any, Optional
+import csv
 import argparse
-import certifi
 import re
 import base64
+from datetime import datetime
+import os
+import sys
+try:
+    # Try to use urllib from standard library instead of requests
+    from urllib.request import Request, urlopen
+    from urllib.error import URLError, HTTPError
+    import ssl
+except ImportError:
+    pass
 
-class KsqlDBLineage:
+class KsqlDBLineageOffline:
     def __init__(self, ksql_url: str, username: str = None, password: str = None, 
                  api_key: str = None, api_secret: str = None, 
                  verify_ssl: bool = True, ca_cert: str = None):
         self.ksql_url = f"{ksql_url}/ksql"
-        self.headers = {
-            "Content-Type": "application/vnd.ksql.v1+json; charset=utf-8",
-            "Accept": "application/vnd.ksql.v1+json"
-        }
-        self.auth = None
+        self.username = username
+        self.password = password
+        self.api_key = api_key
+        self.api_secret = api_secret
         self.verify_ssl = verify_ssl
         self.ca_cert = ca_cert
-        
-        if username and password:
-            self.auth = (username, password)
-        elif api_key and api_secret:
-            credentials = base64.b64encode(f"{api_key}:{api_secret}".encode()).decode()
-            self.headers["Authorization"] = f"Basic {credentials}"
 
-    def execute_ksql(self, ksql: str) -> Optional[Dict[str, Any]]:
-        """Execute ksqlDB query and return results"""
+    def execute_ksql(self, ksql: str):
+        """Execute ksqlDB query using urllib (standard library)"""
         try:
             print(f"Executing: {ksql[:100]}...")
             
-            payload = {
+            payload = json.dumps({
                 "ksql": ksql,
                 "streamsProperties": {}
+            }).encode('utf-8')
+            
+            headers = {
+                "Content-Type": "application/vnd.ksql.v1+json; charset=utf-8",
+                "Accept": "application/vnd.ksql.v1+json",
+                "User-Agent": "ksqlDB-Lineage-Tool/1.0"
             }
             
-            verify = self.verify_ssl
-            if self.ca_cert:
-                verify = self.ca_cert
-            elif verify is True:
-                verify = certifi.where()
+            # Handle authentication
+            if self.username and self.password:
+                auth_string = base64.b64encode(f"{self.username}:{self.password}".encode()).decode()
+                headers["Authorization"] = f"Basic {auth_string}"
+            elif self.api_key and self.api_secret:
+                auth_string = base64.b64encode(f"{self.api_key}:{self.api_secret}".encode()).decode()
+                headers["Authorization"] = f"Basic {auth_string}"
             
-            response = requests.post(
-                self.ksql_url,
-                headers=self.headers,
-                auth=self.auth,
-                json=payload,
-                timeout=30,
-                verify=verify
-            )
+            # Create SSL context
+            ssl_context = None
+            if not self.verify_ssl:
+                ssl_context = ssl._create_unverified_context()
+            elif self.ca_cert:
+                ssl_context = ssl.create_default_context(cafile=self.ca_cert)
             
-            print(f"Response status: {response.status_code}")
+            request = Request(self.ksql_url, data=payload, headers=headers, method='POST')
             
-            if response.status_code != 200:
-                print(f"Error: HTTP {response.status_code} - {response.text}")
+            if ssl_context:
+                response = urlopen(request, context=ssl_context, timeout=30)
+            else:
+                response = urlopen(request, timeout=30)
+            
+            print(f"Response status: {response.getcode()}")
+            
+            if response.getcode() == 200:
+                result = response.read().decode('utf-8')
+                return json.loads(result)
+            else:
+                print(f"Error: HTTP {response.getcode()}")
                 return None
                 
-            result = response.json()
-            return result
-            
+        except HTTPError as e:
+            print(f"HTTP Error: {e.code} - {e.reason}")
+            print(f"Response: {e.read().decode()}")
+            return None
+        except URLError as e:
+            print(f"URL Error: {e.reason}")
+            return None
         except Exception as e:
             print(f"Error: {e}")
             return None
 
-    def debug_response_format(self):
-        """Debug method to see the actual response structure"""
-        test_queries = [
-            "SHOW STREAMS;",
-            "SHOW STREAMS EXTENDED;", 
-            "SHOW QUERIES;",
-            "SHOW QUERIES EXTENDED;",
-            "LIST STREAMS;",
-            "LIST QUERIES;",
-        ]
-        
-        for query in test_queries:
-            print(f"\n{'='*60}")
-            print(f"Query: {query}")
-            print(f"{'='*60}")
-            result = self.execute_ksql(query)
-            if result:
-                print("Full response structure:")
-                print(json.dumps(result, indent=2, default=str))
-                
-                if isinstance(result, list):
-                    print(f"\nResponse is a LIST with {len(result)} items")
-                    for i, item in enumerate(result):
-                        print(f"Item {i} type: {type(item)}, keys: {list(item.keys()) if isinstance(item, dict) else 'Not a dict'}")
-                elif isinstance(result, dict):
-                    print(f"\nResponse is a DICT with keys: {list(result.keys())}")
-
-    def parse_show_response(self, response: Any, entity_type: str) -> List[Dict[str, Any]]:
-        """Parse SHOW STREAMS/TABLES/QUERIES response - handles multiple formats"""
+    def parse_show_response(self, response, entity_type: str):
+        """Parse SHOW STREAMS/TABLES/QUERIES response"""
         entities = []
-        
-        print(f"Parsing {entity_type} from response type: {type(response)}")
         
         if isinstance(response, list):
             for item in response:
@@ -106,8 +98,6 @@ class KsqlDBLineage:
                             entities.append(item[entity_type])
                     elif 'name' in item and ('topic' in item or 'queryString' in item):
                         entities.append(item)
-                    elif 'statementText' in item and entity_type[:-1].upper() in item.get('statementText', ''):
-                        print(f"Found statementText: {item.get('statementText')}")
         
         elif isinstance(response, dict):
             if entity_type in response:
@@ -116,23 +106,15 @@ class KsqlDBLineage:
                 else:
                     entities.append(response[entity_type])
         
-        print(f"Found {len(entities)} {entity_type} after parsing")
-        
-        if entities:
-            print(f"First {entity_type} example:")
-            print(json.dumps(entities[0], indent=2, default=str))
-        
         return entities
 
-    def parse_dependencies(self, sql: str, query_id: str) -> List[Dict[str, str]]:
-        """Parse SQL to extract source and target relationships with better pattern matching"""
+    def parse_dependencies(self, sql: str, query_id: str):
+        """Parse SQL to extract source and target relationships"""
         dependencies = []
         if not sql:
             return dependencies
             
         sql_upper = sql.upper().replace('\n', ' ').replace('\r', ' ')
-        
-        print(f"Parsing dependencies from SQL: {sql_upper[:200]}...")
         
         # Pattern 1: CREATE STREAM/TABLE ... AS SELECT ... FROM ...
         create_pattern = r'CREATE\s+(TABLE|STREAM)\s+(\w+)\s+AS\s+SELECT.*?\s+FROM\s+(\w+)'
@@ -145,7 +127,6 @@ class KsqlDBLineage:
                 "query_id": query_id,
                 "type": f"CREATE_{object_type}"
             })
-            print(f"Found CREATE dependency: {source} -> {target}")
         
         # Pattern 2: INSERT INTO ... SELECT ... FROM ...
         insert_pattern = r'INSERT\s+INTO\s+(\w+)\s+SELECT.*?\s+FROM\s+(\w+)'
@@ -158,27 +139,11 @@ class KsqlDBLineage:
                 "query_id": query_id,
                 "type": "INSERT_INTO"
             })
-            print(f"Found INSERT dependency: {source} -> {target}")
         
-        # Pattern 3: CREATE STREAM/TABLE ... WITH (...)
-        if not dependencies and ("CREATE STREAM" in sql_upper or "CREATE TABLE" in sql_upper):
-            create_name_pattern = r'CREATE\s+(TABLE|STREAM)\s+(\w+)'
-            matches = re.findall(create_name_pattern, sql_upper)
-            for match in matches:
-                object_type, name = match
-                dependencies.append({
-                    "source": f"EXTERNAL_SOURCE_{name}",
-                    "target": name,
-                    "query_id": query_id,
-                    "type": f"SOURCE_{object_type}"
-                })
-                print(f"Found SOURCE dependency: EXTERNAL -> {name}")
-        
-        print(f"Total dependencies found: {len(dependencies)}")
         return dependencies
 
-    def build_lineage(self) -> Dict[str, Any]:
-        """Build complete lineage graph with enhanced parsing"""
+    def build_lineage(self):
+        """Build complete lineage graph"""
         print("Collecting ksqlDB metadata...")
         
         lineage = {
@@ -187,87 +152,54 @@ class KsqlDBLineage:
             "queries": {},
             "dependencies": [],
             "lineage_graph": {},
-            "raw_responses": {}
+            "metadata": {
+                "generated_at": datetime.now().isoformat(),
+                "ksql_url": self.ksql_url
+            }
         }
         
-        # Get streams with multiple approaches
+        # Get streams
         streams_result = self.execute_ksql("SHOW STREAMS EXTENDED;")
-        lineage['raw_responses']['streams'] = streams_result
-        
         if streams_result:
             streams = self.parse_show_response(streams_result, 'streams')
-            if not streams:
-                print("Trying LIST STREAMS as alternative...")
-                streams_result_alt = self.execute_ksql("LIST STREAMS;")
-                streams = self.parse_show_response(streams_result_alt, 'streams')
-            
             for stream in streams:
                 stream_name = stream.get('name')
-                if not stream_name:
-                    stream_name = stream.get('sourceDescription', {}).get('name') if isinstance(stream.get('sourceDescription'), dict) else None
-                
                 if stream_name:
                     lineage['streams'][stream_name] = {
                         'type': 'STREAM',
-                        'topic': stream.get('topic', stream.get('kafkaTopic', '')),
+                        'topic': stream.get('topic', ''),
                         'format': stream.get('format', ''),
-                        'query': stream.get('query', ''),
-                        'raw_data': stream
+                        'query': stream.get('query', '')
                     }
-                    print(f"Added stream: {stream_name}")
         
         # Get tables
         tables_result = self.execute_ksql("SHOW TABLES EXTENDED;")
-        lineage['raw_responses']['tables'] = tables_result
-        
         if tables_result:
             tables = self.parse_show_response(tables_result, 'tables')
-            if not tables:
-                print("Trying LIST TABLES as alternative...")
-                tables_result_alt = self.execute_ksql("LIST TABLES;")
-                tables = self.parse_show_response(tables_result_alt, 'tables')
-            
             for table in tables:
                 table_name = table.get('name')
-                if not table_name:
-                    table_name = table.get('sourceDescription', {}).get('name') if isinstance(table.get('sourceDescription'), dict) else None
-                
                 if table_name:
                     lineage['tables'][table_name] = {
                         'type': 'TABLE', 
-                        'topic': table.get('topic', table.get('kafkaTopic', '')),
+                        'topic': table.get('topic', ''),
                         'format': table.get('format', ''),
-                        'query': table.get('query', ''),
-                        'raw_data': table
+                        'query': table.get('query', '')
                     }
-                    print(f"Added table: {table_name}")
         
         # Get queries
         queries_result = self.execute_ksql("SHOW QUERIES EXTENDED;")
-        lineage['raw_responses']['queries'] = queries_result
-        
         if queries_result:
             queries = self.parse_show_response(queries_result, 'queries')
-            if not queries:
-                print("Trying LIST QUERIES as alternative...")
-                queries_result_alt = self.execute_ksql("LIST QUERIES;")
-                queries = self.parse_show_response(queries_result_alt, 'queries')
-            
             for query in queries:
                 query_id = query.get('id')
-                if not query_id:
-                    query_id = query.get('queryId', query.get('idString', ''))
-                
                 if query_id:
-                    sql_text = query.get('sql', query.get('queryString', ''))
+                    sql_text = query.get('sql', '')
                     lineage['queries'][query_id] = {
                         'sql': sql_text,
-                        'status': query.get('status', query.get('state', '')),
+                        'status': query.get('status', ''),
                         'sources': query.get('sources', []),
-                        'sinks': query.get('sinks', []),
-                        'raw_data': query
+                        'sinks': query.get('sinks', [])
                     }
-                    print(f"Added query: {query_id}")
                     
                     dependencies = self.parse_dependencies(sql_text, query_id)
                     lineage['dependencies'].extend(dependencies)
@@ -276,7 +208,7 @@ class KsqlDBLineage:
         self._build_lineage_graph(lineage)
         return lineage
 
-    def _build_lineage_graph(self, lineage: Dict[str, Any]):
+    def _build_lineage_graph(self, lineage):
         """Build a graph representation of lineage"""
         graph = {}
         
@@ -291,78 +223,114 @@ class KsqlDBLineage:
             target = dep['target']
             
             if source not in graph:
-                graph[source] = {'type': 'unknown', 'dependencies': [], 'dependents': []}
+                graph[source] = {'type': 'external', 'dependencies': [], 'dependents': []}
             if target not in graph:
                 graph[target] = {'type': 'unknown', 'dependencies': [], 'dependents': []}
             
-            graph[source]['dependents'].append(target)
-            graph[target]['dependencies'].append(source)
+            if target not in graph[source]['dependents']:
+                graph[source]['dependents'].append(target)
+            if source not in graph[target]['dependencies']:
+                graph[target]['dependencies'].append(source)
         
         lineage['lineage_graph'] = graph
 
-    def print_lineage_report(self, lineage: Dict[str, Any]):
+    def print_lineage_report(self, lineage):
         """Print a formatted lineage report"""
-        print("\n" + "="*80)
-        print("KSQLDB LINEAGE REPORT")
-        print("="*80)
+        print("\n" + "=" * 100)
+        print("KSQLDB LINEAGE ANALYSIS REPORT")
+        print("=" * 100)
         
-        print(f"\nOBJECT SUMMARY:")
+        # Summary Section
+        print(f"\nSUMMARY")
+        print("-" * 50)
         print(f"  Streams: {len(lineage['streams'])}")
-        print(f"  Tables: {len(lineage['tables'])}")
+        print(f"  Tables:  {len(lineage['tables'])}")
         print(f"  Queries: {len(lineage['queries'])}")
-        print(f"  Dependencies: {len(lineage['dependencies'])}")
+        print(f"  Data Flows: {len(lineage['dependencies'])}")
+        print(f"  Generated: {lineage['metadata']['generated_at']}")
         
+        # Streams Section
         if lineage['streams']:
-            print(f"  Stream names: {list(lineage['streams'].keys())}")
+            print(f"\nSTREAMS ({len(lineage['streams'])})")
+            print("-" * 50)
+            for stream_name, info in sorted(lineage['streams'].items()):
+                print(f"  {stream_name}")
+                print(f"    Topic: {info['topic']} | Format: {info['format']}")
+        
+        # Tables Section
         if lineage['tables']:
-            print(f"  Table names: {list(lineage['tables'].keys())}")
+            print(f"\nTABLES ({len(lineage['tables'])})")
+            print("-" * 50)
+            for table_name, info in sorted(lineage['tables'].items()):
+                print(f"  {table_name}")
+                print(f"    Topic: {info['topic']} | Format: {info['format']}")
         
-        print(f"\nDEPENDENCIES:")
-        print("-" * 80)
+        # Data Flow Section
         if lineage['dependencies']:
-            for dep in lineage['dependencies']:
-                print(f"  {dep['source']} -> {dep['target']} [{dep['type']}]")
-        else:
-            print("  No dependencies found")
+            print(f"\nDATA FLOWS ({len(lineage['dependencies'])})")
+            print("-" * 80)
+            print(f"  {'SOURCE':<20} -> {'TARGET':<20} {'TYPE':<15} {'QUERY':<15}")
+            print("  " + "-" * 78)
+            for dep in sorted(lineage['dependencies'], key=lambda x: (x['source'], x['target'])):
+                source = dep['source'][:19]
+                target = dep['target'][:19]
+                flow_type = dep['type'].replace('_', ' ')[:14]
+                query_id = dep['query_id'][:14]
+                print(f"  {source:<20} -> {target:<20} {flow_type:<15} {query_id:<15}")
         
-        print(f"\nLINEAGE GRAPH:")
-        print("-" * 80)
+        # Lineage Graph Section
         if lineage['lineage_graph']:
-            for node, info in lineage['lineage_graph'].items():
-                deps = ", ".join(info['dependencies']) if info['dependencies'] else "None"
-                dependents = ", ".join(info['dependents']) if info['dependents'] else "None"
-                print(f"  {node} ({info['type']}):")
-                print(f"    ← Depends on: {deps}")
-                print(f"    → Feeds into: {dependents}")
-        else:
-            print("  No lineage graph built")
+            print(f"\nLINEAGE GRAPH")
+            print("-" * 80)
+            for node, info in sorted(lineage['lineage_graph'].items()):
+                if info['dependencies'] or info['dependents']:
+                    print(f"  {node} ({info['type']})")
+                    if info['dependencies']:
+                        deps = ", ".join(sorted(info['dependencies']))
+                        print(f"    <- Depends on: {deps}")
+                    if info['dependents']:
+                        dependents = ", ".join(sorted(info['dependents']))
+                        print(f"    -> Feeds into: {dependents}")
+                    print()
 
-    def export_lineage_json(self, lineage: Dict[str, Any], filename: str):
+    def export_to_csv(self, lineage, base_filename: str):
+        """Export lineage data to multiple CSV files"""
+        
+        # Export dependencies
+        deps_filename = f"{base_filename}_dependencies.csv"
+        with open(deps_filename, 'w', newline='') as f:
+            writer = csv.writer(f)
+            writer.writerow(['Source', 'Target', 'Relationship_Type', 'Query_ID'])
+            for dep in lineage['dependencies']:
+                writer.writerow([dep['source'], dep['target'], dep['type'], dep['query_id']])
+        print(f"Dependencies exported to: {deps_filename}")
+        
+        # Export streams
+        streams_filename = f"{base_filename}_streams.csv"
+        with open(streams_filename, 'w', newline='') as f:
+            writer = csv.writer(f)
+            writer.writerow(['Stream_Name', 'Kafka_Topic', 'Format', 'Query'])
+            for stream_name, info in lineage['streams'].items():
+                writer.writerow([stream_name, info['topic'], info['format'], info['query']])
+        print(f"Streams exported to: {streams_filename}")
+        
+        # Export tables
+        tables_filename = f"{base_filename}_tables.csv"
+        with open(tables_filename, 'w', newline='') as f:
+            writer = csv.writer(f)
+            writer.writerow(['Table_Name', 'Kafka_Topic', 'Format', 'Query'])
+            for table_name, info in lineage['tables'].items():
+                writer.writerow([table_name, info['topic'], info['format'], info['query']])
+        print(f"Tables exported to: {tables_filename}")
+
+    def export_lineage_json(self, lineage, filename: str):
         """Export lineage as JSON file"""
         with open(filename, 'w') as f:
             json.dump(lineage, f, indent=2, default=str)
-        print(f"Lineage exported to {filename}")
-
-def test_curl_command(ksql_url: str, auth_args: str = ""):
-    """Test what curl command would work"""
-    curl_cmd = f'curl -X "POST" "{ksql_url}/ksql" \\\n'
-    curl_cmd += '     -H "Content-Type: application/vnd.ksql.v1+json; charset=utf-8" \\\n'
-    curl_cmd += '     -H "Accept: application/vnd.ksql.v1+json" \\\n'
-    
-    if auth_args:
-        curl_cmd += f'     {auth_args} \\\n'
-    
-    curl_cmd += '     -d $\'\n'
-    curl_cmd += '     {\n'
-    curl_cmd += '       "ksql": "SHOW STREAMS EXTENDED;",\n'
-    curl_cmd += '       "streamsProperties": {}\n'
-    curl_cmd += '     }\'\n'
-    
-    print("Equivalent curl command for testing:")
-    print(curl_cmd)
+        print(f"JSON exported to: {filename}")
 
 def main():
-    parser = argparse.ArgumentParser(description='Extract ksqlDB lineage')
+    parser = argparse.ArgumentParser(description='Offline ksqlDB Lineage Tool - No External Dependencies')
     parser.add_argument('--url', required=True, help='ksqlDB server URL')
     parser.add_argument('--username', help='Username for basic auth') 
     parser.add_argument('--password', help='Password for basic auth')
@@ -370,22 +338,12 @@ def main():
     parser.add_argument('--api-secret', help='API secret for Confluent Cloud')
     parser.add_argument('--no-ssl-verify', action='store_true', help='Disable SSL verification')
     parser.add_argument('--ca-cert', help='Path to custom CA certificate file')
-    parser.add_argument('--debug', action='store_true', help='Enable debug mode')
-    parser.add_argument('--export-json', help='Export lineage to JSON file')
+    parser.add_argument('--export-csv', help='Export to CSV files (base filename)')
+    parser.add_argument('--export-json', help='Export to JSON file')
     
     args = parser.parse_args()
     
-    auth_args = ""
-    if args.username and args.password:
-        auth_args = f'-u "{args.username}:{args.password}"'
-    elif args.api_key and args.api_secret:
-        credentials = base64.b64encode(f"{args.api_key}:{args.api_secret}".encode()).decode()
-        auth_args = f'-H "Authorization: Basic {credentials}"'
-    
-    test_curl_command(args.url, auth_args)
-    print()
-    
-    ksql_client = KsqlDBLineage(
+    ksql_client = KsqlDBLineageOffline(
         ksql_url=args.url,
         username=args.username,
         password=args.password,
@@ -395,14 +353,14 @@ def main():
         ca_cert=args.ca_cert
     )
     
-    if args.debug:
-        ksql_client.debug_response_format()
-    else:
-        lineage = ksql_client.build_lineage()
-        ksql_client.print_lineage_report(lineage)
-        
-        if args.export_json:
-            ksql_client.export_lineage_json(lineage, args.export_json)
+    lineage = ksql_client.build_lineage()
+    ksql_client.print_lineage_report(lineage)
+    
+    if args.export_csv:
+        ksql_client.export_to_csv(lineage, args.export_csv)
+    
+    if args.export_json:
+        ksql_client.export_lineage_json(lineage, args.export_json)
 
 if __name__ == "__main__":
     main()
