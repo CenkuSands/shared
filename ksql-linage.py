@@ -66,8 +66,7 @@ class KsqlDBLineageEnhanced:
             
             if response.getcode() == 200:
                 result = response.read().decode('utf-8')
-                parsed_result = json.loads(result)
-                return parsed_result
+                return json.loads(result)
             else:
                 print(f"Error: HTTP {response.getcode()}")
                 return None
@@ -76,38 +75,8 @@ class KsqlDBLineageEnhanced:
             print(f"Error: {e}")
             return None
 
-    def debug_raw_response(self):
-        """Debug the actual raw response structure"""
-        test_queries = [
-            "SHOW STREAMS;",
-            "SHOW STREAMS EXTENDED;", 
-            "SHOW QUERIES;",
-            "SHOW QUERIES EXTENDED;"
-        ]
-        
-        for query in test_queries:
-            print(f"\n{'='*80}")
-            print(f"RAW DEBUG: Testing query: {query}")
-            print(f"{'='*80}")
-            result = self.execute_ksql(query)
-            if result:
-                print("COMPLETE RAW RESPONSE:")
-                print(json.dumps(result, indent=2, default=str))
-                print(f"\nRESPONSE TYPE: {type(result)}")
-                if isinstance(result, list):
-                    print(f"LIST LENGTH: {len(result)}")
-                    for i, item in enumerate(result):
-                        print(f"\nITEM {i}:")
-                        print(f"  TYPE: {type(item)}")
-                        if isinstance(item, dict):
-                            print(f"  KEYS: {list(item.keys())}")
-                            for key, value in item.items():
-                                print(f"    {key}: {type(value)} = {str(value)[:200]}...")
-                else:
-                    print("RESPONSE IS NOT A LIST!")
-
     def parse_show_response(self, response, entity_type: str):
-        """Parse SHOW STREAMS/TABLES/QUERIES response - handles all formats"""
+        """Parse SHOW STREAMS/TABLES/QUERIES response - fixed for your ksqlDB format"""
         print(f"DEBUG: Parsing {entity_type} from response type: {type(response)}")
         
         entities = []
@@ -118,94 +87,56 @@ class KsqlDBLineageEnhanced:
                 if isinstance(item, dict):
                     print(f"DEBUG: Item {i} keys: {list(item.keys())}")
                     
-                    # Format 1: Direct entities list (most common)
-                    if entity_type in item and isinstance(item[entity_type], list):
+                    # Your ksqlDB format: streams are directly in the list items
+                    if 'type' in item and item['type'] in ['STREAM', 'TABLE']:
+                        print(f"DEBUG: Found direct {item['type']} entity: {item.get('name')}")
+                        entities.append(item)
+                    
+                    # Also check for nested entities (some ksqlDB versions)
+                    elif entity_type in item and isinstance(item[entity_type], list):
                         print(f"DEBUG: Found {entity_type} list with {len(item[entity_type])} items")
                         entities.extend(item[entity_type])
-                    
-                    # Format 2: Single entity in key
-                    elif entity_type in item:
-                        print(f"DEBUG: Found single {entity_type} object")
-                        entities.append(item[entity_type])
-                    
-                    # Format 3: Statement text with entities
-                    elif 'statementText' in item:
-                        stmt = item['statementText']
-                        print(f"DEBUG: Found statementText: {stmt[:100]}...")
-                        # This might contain entity information
-                    
-                    # Format 4: Error message
-                    elif '@type' in item and 'error_code' in item:
-                        print(f"DEBUG: Found error: {item}")
-                    
-                    # Format 5: Direct entity in root (some ksqlDB versions)
-                    elif 'name' in item:
-                        print(f"DEBUG: Found entity with name: {item['name']}")
-                        entities.append(item)
         
         elif isinstance(response, dict):
             print(f"DEBUG: Response is a dict with keys: {list(response.keys())}")
-            if entity_type in response:
-                entities_data = response[entity_type]
-                if isinstance(entities_data, list):
-                    entities.extend(entities_data)
-                else:
-                    entities.append(entities_data)
+            if entity_type in response and isinstance(response[entity_type], list):
+                entities.extend(response[entity_type])
         
         print(f"DEBUG: Found {len(entities)} {entity_type} entities")
-        
-        # Show what we actually found
-        for i, entity in enumerate(entities):
-            if isinstance(entity, dict):
-                print(f"DEBUG: Entity {i}: {entity.get('name', 'No name')} - keys: {list(entity.keys())}")
-            else:
-                print(f"DEBUG: Entity {i} is not a dict: {type(entity)} = {entity}")
-        
         return entities
 
     def extract_entity_info(self, entity, entity_type: str):
         """Extract standardized information from entity objects"""
         if not isinstance(entity, dict):
-            print(f"DEBUG: Entity is not a dict: {type(entity)}")
             return None
             
         name = entity.get('name')
         if not name:
-            print(f"DEBUG: Entity has no name, keys: {list(entity.keys())}")
             return None
         
-        # Try different field names for topic
-        topic = entity.get('topic', entity.get('kafkaTopic', ''))
-        
-        # Try different field names for format
-        format_val = entity.get('format', entity.get('valueFormat', ''))
-        
-        # Try different field names for query
-        query = entity.get('query', entity.get('queryId', ''))
+        # Your ksqlDB uses different field names
+        topic = entity.get('topic', '')
+        format_val = entity.get('valueFormat', entity.get('format', ''))
+        key_format = entity.get('keyFormat', '')
         
         return {
             'name': name,
             'type': entity_type,
             'topic': topic,
             'format': format_val,
-            'query': query
+            'key_format': key_format,
+            'is_windowed': entity.get('isWindowed', False)
         }
 
     def parse_dependencies_from_sql(self, sql: str, query_id: str):
         """Parse SQL to extract source and target relationships"""
         dependencies = []
         if not sql:
-            print(f"DEBUG: No SQL provided for query {query_id}")
             return dependencies
             
         # Clean and normalize SQL
         sql_clean = ' '.join(sql.split()).upper()
         print(f"DEBUG: Parsing SQL for {query_id}: {sql_clean[:200]}...")
-        
-        # Check if this looks like a persistent query
-        if not any(keyword in sql_clean for keyword in ['CREATE', 'INSERT', 'SELECT']):
-            print(f"DEBUG: SQL doesn't contain CREATE/INSERT/SELECT keywords")
-            return dependencies
         
         # Pattern 1: CREATE STREAM/TABLE ... AS SELECT ... FROM ...
         create_pattern = r'CREATE\s+(TABLE|STREAM)\s+(\w+)\s+AS\s+SELECT\s+.*?\s+FROM\s+(\w+)'
@@ -254,7 +185,7 @@ class KsqlDBLineageEnhanced:
         return dependencies
 
     def build_comprehensive_lineage(self):
-        """Build comprehensive lineage with enhanced parsing"""
+        """Build comprehensive lineage with fixed parsing"""
         print("Building comprehensive ksqlDB lineage...")
         
         lineage = {
@@ -288,6 +219,18 @@ class KsqlDBLineageEnhanced:
                     lineage['streams'][info['name']] = info
                     print(f"✓ Added stream: {info['name']}")
         
+        # If no streams found with EXTENDED, try without
+        if not lineage['streams']:
+            print("Trying SHOW STREAMS without EXTENDED...")
+            streams_result = self.execute_ksql("SHOW STREAMS;")
+            if streams_result:
+                streams = self.parse_show_response(streams_result, 'streams')
+                for stream in streams:
+                    info = self.extract_entity_info(stream, 'STREAM')
+                    if info and info['name']:
+                        lineage['streams'][info['name']] = info
+                        print(f"✓ Added stream: {info['name']}")
+        
         # Get tables  
         print("\n" + "="*60)
         print("STEP 2: FETCHING TABLES")
@@ -300,6 +243,18 @@ class KsqlDBLineageEnhanced:
                 if info and info['name']:
                     lineage['tables'][info['name']] = info
                     print(f"✓ Added table: {info['name']}")
+        
+        # If no tables found with EXTENDED, try without
+        if not lineage['tables']:
+            print("Trying SHOW TABLES without EXTENDED...")
+            tables_result = self.execute_ksql("SHOW TABLES;")
+            if tables_result:
+                tables = self.parse_show_response(tables_result, 'tables')
+                for table in tables:
+                    info = self.extract_entity_info(table, 'TABLE')
+                    if info and info['name']:
+                        lineage['tables'][info['name']] = info
+                        print(f"✓ Added table: {info['name']}")
         
         # Get queries
         print("\n" + "="*60)
@@ -324,6 +279,29 @@ class KsqlDBLineageEnhanced:
                     # Parse dependencies from SQL
                     dependencies = self.parse_dependencies_from_sql(sql_text, query_id)
                     lineage['dependencies'].extend(dependencies)
+        
+        # If no queries found with EXTENDED, try without
+        if not lineage['queries']:
+            print("Trying SHOW QUERIES without EXTENDED...")
+            queries_result = self.execute_ksql("SHOW QUERIES;")
+            if queries_result:
+                queries = self.parse_show_response(queries_result, 'queries')
+                for query in queries:
+                    query_id = query.get('id', query.get('queryId', ''))
+                    if query_id:
+                        sql_text = query.get('sql', query.get('queryString', ''))
+                        
+                        lineage['queries'][query_id] = {
+                            'sql': sql_text,
+                            'status': query.get('status', query.get('state', '')),
+                            'sources': query.get('sources', []),
+                            'sinks': query.get('sinks', [])
+                        }
+                        print(f"✓ Added query: {query_id}")
+                        
+                        # Parse dependencies from SQL
+                        dependencies = self.parse_dependencies_from_sql(sql_text, query_id)
+                        lineage['dependencies'].extend(dependencies)
         
         print(f"\n" + "="*60)
         print("COLLECTION SUMMARY")
@@ -417,17 +395,17 @@ class KsqlDBLineageEnhanced:
         
         # Show what objects we found
         if lineage['streams']:
-            print(f"\nSTREAMS:")
+            print(f"\nSTREAMS FOUND:")
             for stream in sorted(lineage['streams'].keys()):
                 print(f"  - {stream}")
         
         if lineage['tables']:
-            print(f"\nTABLES:")
+            print(f"\nTABLES FOUND:")
             for table in sorted(lineage['tables'].keys()):
                 print(f"  - {table}")
         
         if lineage['queries']:
-            print(f"\nQUERIES:")
+            print(f"\nQUERIES FOUND:")
             for query in sorted(lineage['queries'].keys()):
                 print(f"  - {query}")
         
@@ -479,6 +457,20 @@ class KsqlDBLineageEnhanced:
                     ])
             
             print(f"✓ Relationships exported to: {master_filename}")
+            
+            # Object inventory
+            inventory_filename = f"{base_filename}_inventory.csv"
+            with open(inventory_filename, 'w', newline='') as f:
+                writer = csv.writer(f)
+                writer.writerow(['Name', 'Type', 'Topic', 'Format', 'Key_Format'])
+                
+                for stream_name, info in lineage['streams'].items():
+                    writer.writerow([stream_name, 'STREAM', info['topic'], info['format'], info.get('key_format', '')])
+                
+                for table_name, info in lineage['tables'].items():
+                    writer.writerow([table_name, 'TABLE', info['topic'], info['format'], info.get('key_format', '')])
+            
+            print(f"✓ Object inventory exported to: {inventory_filename}")
         else:
             print("No relationships to export")
 
@@ -492,7 +484,6 @@ def main():
     parser.add_argument('--no-ssl-verify', action='store_true', help='Disable SSL verification')
     parser.add_argument('--ca-cert', help='Path to custom CA certificate file')
     parser.add_argument('--export-csv', help='Export relationship CSVs (base filename)')
-    parser.add_argument('--debug-raw', action='store_true', help='Show raw response structure')
     
     args = parser.parse_args()
     
@@ -506,14 +497,11 @@ def main():
         ca_cert=args.ca_cert
     )
     
-    if args.debug_raw:
-        ksql_client.debug_raw_response()
-    else:
-        lineage = ksql_client.build_comprehensive_lineage()
-        ksql_client.print_relationship_report(lineage)
-        
-        if args.export_csv:
-            ksql_client.export_relationship_csv(lineage, args.export_csv)
+    lineage = ksql_client.build_comprehensive_lineage()
+    ksql_client.print_relationship_report(lineage)
+    
+    if args.export_csv:
+        ksql_client.export_relationship_csv(lineage, args.export_csv)
 
 if __name__ == "__main__":
     main()
