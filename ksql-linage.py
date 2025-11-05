@@ -6,6 +6,7 @@ import base64
 from datetime import datetime
 import os
 import sys
+from collections import defaultdict
 try:
     from urllib.request import Request, urlopen
     from urllib.error import URLError, HTTPError
@@ -13,7 +14,7 @@ try:
 except ImportError:
     pass
 
-class KsqlDBLineageOffline:
+class KsqlDBLineageEnhanced:
     def __init__(self, ksql_url: str, username: str = None, password: str = None, 
                  api_key: str = None, api_secret: str = None, 
                  verify_ssl: bool = True, ca_cert: str = None):
@@ -41,7 +42,6 @@ class KsqlDBLineageOffline:
                 "User-Agent": "ksqlDB-Lineage-Tool/1.0"
             }
             
-            # Handle authentication
             if self.username and self.password:
                 auth_string = base64.b64encode(f"{self.username}:{self.password}".encode()).decode()
                 headers["Authorization"] = f"Basic {auth_string}"
@@ -49,7 +49,6 @@ class KsqlDBLineageOffline:
                 auth_string = base64.b64encode(f"{self.api_key}:{self.api_secret}".encode()).decode()
                 headers["Authorization"] = f"Basic {auth_string}"
             
-            # Create SSL context
             ssl_context = None
             if not self.verify_ssl:
                 ssl_context = ssl._create_unverified_context()
@@ -67,104 +66,36 @@ class KsqlDBLineageOffline:
             
             if response.getcode() == 200:
                 result = response.read().decode('utf-8')
-                parsed_result = json.loads(result)
-                print(f"Response type: {type(parsed_result)}")
-                if isinstance(parsed_result, list):
-                    print(f"Response list length: {len(parsed_result)}")
-                    for i, item in enumerate(parsed_result):
-                        print(f"  Item {i} type: {type(item)}, keys: {list(item.keys()) if isinstance(item, dict) else 'N/A'}")
-                return parsed_result
+                return json.loads(result)
             else:
                 print(f"Error: HTTP {response.getcode()}")
                 return None
                 
-        except HTTPError as e:
-            print(f"HTTP Error: {e.code} - {e.reason}")
-            try:
-                error_body = e.read().decode()
-                print(f"Error response: {error_body}")
-            except:
-                pass
-            return None
-        except URLError as e:
-            print(f"URL Error: {e.reason}")
-            return None
         except Exception as e:
             print(f"Error: {e}")
-            import traceback
-            traceback.print_exc()
             return None
 
-    def debug_response_structure(self):
-        """Debug the actual response structure"""
-        test_queries = [
-            "SHOW STREAMS;",
-            "SHOW STREAMS EXTENDED;", 
-            "SHOW QUERIES;",
-            "SHOW QUERIES EXTENDED;",
-            "LIST STREAMS;",
-            "LIST QUERIES;"
-        ]
-        
-        for query in test_queries:
-            print(f"\n{'='*60}")
-            print(f"DEBUG: Testing query: {query}")
-            print(f"{'='*60}")
-            result = self.execute_ksql(query)
-            if result:
-                print("RAW RESPONSE:")
-                print(json.dumps(result, indent=2, default=str))
-
     def parse_show_response(self, response, entity_type: str):
-        """Parse SHOW STREAMS/TABLES/QUERIES response - enhanced debugging"""
-        print(f"DEBUG: Parsing {entity_type} from response type: {type(response)}")
-        
+        """Parse SHOW STREAMS/TABLES/QUERIES response"""
         entities = []
         
         if isinstance(response, list):
-            print(f"DEBUG: Response is a list with {len(response)} items")
-            for i, item in enumerate(response):
-                print(f"DEBUG: Item {i}: {type(item)}")
+            for item in response:
                 if isinstance(item, dict):
-                    print(f"DEBUG: Item {i} keys: {list(item.keys())}")
-                    
-                    # Check for different possible structures
                     if entity_type in item:
-                        print(f"DEBUG: Found '{entity_type}' key in item {i}")
                         if isinstance(item[entity_type], list):
                             entities.extend(item[entity_type])
-                            print(f"DEBUG: Added {len(item[entity_type])} entities from list")
                         else:
                             entities.append(item[entity_type])
-                            print(f"DEBUG: Added 1 entity from direct object")
-                    
-                    # Alternative: look for statementText with tables/streams
-                    elif 'statementText' in item:
-                        stmt = item.get('statementText', '')
-                        print(f"DEBUG: Found statementText: {stmt[:200]}...")
-                        if 'stream' in stmt.lower() or 'table' in stmt.lower():
-                            print(f"DEBUG: Statement contains stream/table reference")
-                    
-                    # Alternative: direct entity in root of item
                     elif 'name' in item and ('topic' in item or 'queryString' in item):
-                        print(f"DEBUG: Found direct entity with name: {item.get('name')}")
                         entities.append(item)
         
         elif isinstance(response, dict):
-            print(f"DEBUG: Response is a dict with keys: {list(response.keys())}")
             if entity_type in response:
-                print(f"DEBUG: Found '{entity_type}' key in root")
                 if isinstance(response[entity_type], list):
                     entities.extend(response[entity_type])
                 else:
                     entities.append(response[entity_type])
-        
-        print(f"DEBUG: Total {len(entities)} {entity_type} found after parsing")
-        
-        # Show what we found
-        if entities:
-            print(f"DEBUG: First {entity_type} example:")
-            print(json.dumps(entities[0], indent=2, default=str))
         
         return entities
 
@@ -175,7 +106,6 @@ class KsqlDBLineageOffline:
             return dependencies
             
         sql_upper = sql.upper().replace('\n', ' ').replace('\r', ' ')
-        print(f"DEBUG: Parsing SQL: {sql_upper[:200]}...")
         
         # Pattern 1: CREATE STREAM/TABLE ... AS SELECT ... FROM ...
         create_pattern = r'CREATE\s+(TABLE|STREAM)\s+(\w+)\s+AS\s+SELECT.*?\s+FROM\s+(\w+)'
@@ -188,7 +118,6 @@ class KsqlDBLineageOffline:
                 "query_id": query_id,
                 "type": f"CREATE_{object_type}"
             })
-            print(f"DEBUG: Found CREATE dependency: {source} -> {target}")
         
         # Pattern 2: INSERT INTO ... SELECT ... FROM ...
         insert_pattern = r'INSERT\s+INTO\s+(\w+)\s+SELECT.*?\s+FROM\s+(\w+)'
@@ -201,263 +130,295 @@ class KsqlDBLineageOffline:
                 "query_id": query_id,
                 "type": "INSERT_INTO"
             })
-            print(f"DEBUG: Found INSERT dependency: {source} -> {target}")
         
-        # Pattern 3: Simple CREATE (source streams/tables)
-        if not dependencies and ("CREATE STREAM" in sql_upper or "CREATE TABLE" in sql_upper):
-            create_name_pattern = r'CREATE\s+(TABLE|STREAM)\s+(\w+)'
-            matches = re.findall(create_name_pattern, sql_upper)
-            for match in matches:
-                object_type, name = match
-                dependencies.append({
-                    "source": f"EXTERNAL_SOURCE",
-                    "target": name,
-                    "query_id": query_id,
-                    "type": f"SOURCE_{object_type}"
-                })
-                print(f"DEBUG: Found SOURCE dependency: EXTERNAL -> {name}")
-        
-        print(f"DEBUG: Total dependencies found in SQL: {len(dependencies)}")
         return dependencies
 
-    def build_lineage(self):
-        """Build complete lineage graph with enhanced debugging"""
-        print("Collecting ksqlDB metadata...")
+    def build_comprehensive_lineage(self):
+        """Build comprehensive lineage with relationships"""
+        print("Building comprehensive ksqlDB lineage...")
         
         lineage = {
             "streams": {},
-            "tables": {},
+            "tables": {}, 
             "queries": {},
             "dependencies": [],
-            "lineage_graph": {},
+            "relationships": {
+                "stream_to_stream": [],
+                "stream_to_table": [],
+                "table_to_stream": [],
+                "table_to_table": [],
+                "query_relationships": []
+            },
             "metadata": {
                 "generated_at": datetime.now().isoformat(),
                 "ksql_url": self.ksql_url
             }
         }
         
-        # Get streams with multiple approaches
-        print("\n" + "="*50)
-        print("FETCHING STREAMS")
-        print("="*50)
+        # Get all objects
         streams_result = self.execute_ksql("SHOW STREAMS EXTENDED;")
         if streams_result:
             streams = self.parse_show_response(streams_result, 'streams')
-            if not streams:
-                print("DEBUG: Trying LIST STREAMS as alternative...")
-                streams_result_alt = self.execute_ksql("LIST STREAMS;")
-                streams = self.parse_show_response(streams_result_alt, 'streams')
-            
             for stream in streams:
                 stream_name = stream.get('name')
-                if not stream_name:
-                    # Try alternative name fields
-                    stream_name = stream.get('sourceDescription', {}).get('name') if isinstance(stream.get('sourceDescription'), dict) else None
-                
                 if stream_name:
                     lineage['streams'][stream_name] = {
                         'type': 'STREAM',
-                        'topic': stream.get('topic', stream.get('kafkaTopic', '')),
+                        'topic': stream.get('topic', ''),
                         'format': stream.get('format', ''),
-                        'query': stream.get('query', ''),
-                        'raw_data': stream  # Keep for debugging
+                        'query': stream.get('query', '')
                     }
-                    print(f"DEBUG: Added stream: {stream_name}")
         
-        # Get tables
-        print("\n" + "="*50)
-        print("FETCHING TABLES")
-        print("="*50)
         tables_result = self.execute_ksql("SHOW TABLES EXTENDED;")
         if tables_result:
             tables = self.parse_show_response(tables_result, 'tables')
-            if not tables:
-                print("DEBUG: Trying LIST TABLES as alternative...")
-                tables_result_alt = self.execute_ksql("LIST TABLES;")
-                tables = self.parse_show_response(tables_result_alt, 'tables')
-            
             for table in tables:
                 table_name = table.get('name')
-                if not table_name:
-                    table_name = table.get('sourceDescription', {}).get('name') if isinstance(table.get('sourceDescription'), dict) else None
-                
                 if table_name:
                     lineage['tables'][table_name] = {
                         'type': 'TABLE', 
-                        'topic': table.get('topic', table.get('kafkaTopic', '')),
+                        'topic': table.get('topic', ''),
                         'format': table.get('format', ''),
-                        'query': table.get('query', ''),
-                        'raw_data': table
+                        'query': table.get('query', '')
                     }
-                    print(f"DEBUG: Added table: {table_name}")
         
-        # Get queries
-        print("\n" + "="*50)
-        print("FETCHING QUERIES")
-        print("="*50)
         queries_result = self.execute_ksql("SHOW QUERIES EXTENDED;")
         if queries_result:
             queries = self.parse_show_response(queries_result, 'queries')
-            if not queries:
-                print("DEBUG: Trying LIST QUERIES as alternative...")
-                queries_result_alt = self.execute_ksql("LIST QUERIES;")
-                queries = self.parse_show_response(queries_result_alt, 'queries')
-            
             for query in queries:
                 query_id = query.get('id')
-                if not query_id:
-                    query_id = query.get('queryId', query.get('idString', ''))
-                
                 if query_id:
-                    sql_text = query.get('sql', query.get('queryString', ''))
+                    sql_text = query.get('sql', '')
                     lineage['queries'][query_id] = {
                         'sql': sql_text,
-                        'status': query.get('status', query.get('state', '')),
+                        'status': query.get('status', ''),
                         'sources': query.get('sources', []),
-                        'sinks': query.get('sinks', []),
-                        'raw_data': query
+                        'sinks': query.get('sinks', [])
                     }
-                    print(f"DEBUG: Added query: {query_id}")
                     
                     dependencies = self.parse_dependencies(sql_text, query_id)
                     lineage['dependencies'].extend(dependencies)
         
-        # Build graph
-        self._build_lineage_graph(lineage)
+        # Build comprehensive relationships
+        self._build_relationships(lineage)
         return lineage
 
-    def _build_lineage_graph(self, lineage):
-        """Build a graph representation of lineage"""
-        graph = {}
+    def _build_relationships(self, lineage):
+        """Build comprehensive relationship mapping"""
+        relationships = lineage['relationships']
         
+        # Build object type mapping
+        object_types = {}
         for stream in lineage['streams']:
-            graph[stream] = {'type': 'stream', 'dependencies': [], 'dependents': []}
-        
+            object_types[stream] = 'STREAM'
         for table in lineage['tables']:
-            graph[table] = {'type': 'table', 'dependencies': [], 'dependents': []}
+            object_types[table] = 'TABLE'
         
+        # Analyze each dependency
         for dep in lineage['dependencies']:
             source = dep['source']
             target = dep['target']
+            query_id = dep['query_id']
             
-            if source not in graph:
-                graph[source] = {'type': 'external', 'dependencies': [], 'dependents': []}
-            if target not in graph:
-                graph[target] = {'type': 'unknown', 'dependencies': [], 'dependents': []}
+            source_type = object_types.get(source, 'EXTERNAL')
+            target_type = object_types.get(target, 'UNKNOWN')
             
-            if target not in graph[source]['dependents']:
-                graph[source]['dependents'].append(target)
-            if source not in graph[target]['dependencies']:
-                graph[target]['dependencies'].append(source)
-        
-        lineage['lineage_graph'] = graph
+            # Categorize relationships
+            if source_type == 'STREAM' and target_type == 'STREAM':
+                relationships['stream_to_stream'].append({
+                    'source_stream': source,
+                    'target_stream': target,
+                    'query_id': query_id,
+                    'relationship_type': dep['type']
+                })
+            elif source_type == 'STREAM' and target_type == 'TABLE':
+                relationships['stream_to_table'].append({
+                    'source_stream': source,
+                    'target_table': target,
+                    'query_id': query_id,
+                    'relationship_type': dep['type']
+                })
+            elif source_type == 'TABLE' and target_type == 'STREAM':
+                relationships['table_to_stream'].append({
+                    'source_table': source,
+                    'target_stream': target,
+                    'query_id': query_id,
+                    'relationship_type': dep['type']
+                })
+            elif source_type == 'TABLE' and target_type == 'TABLE':
+                relationships['table_to_table'].append({
+                    'source_table': source,
+                    'target_table': target,
+                    'query_id': query_id,
+                    'relationship_type': dep['type']
+                })
+            
+            # Build query relationships
+            relationships['query_relationships'].append({
+                'query_id': query_id,
+                'input_object': source,
+                'input_type': source_type,
+                'output_object': target,
+                'output_type': target_type,
+                'operation': dep['type']
+            })
 
-    def print_lineage_report(self, lineage):
-        """Print a formatted lineage report"""
-        print("\n" + "=" * 100)
-        print("KSQLDB LINEAGE ANALYSIS REPORT")
-        print("=" * 100)
+    def print_relationship_report(self, lineage):
+        """Print comprehensive relationship report"""
+        print("\n" + "=" * 120)
+        print("🔗 KSQLDB COMPREHENSIVE RELATIONSHIP REPORT")
+        print("=" * 120)
         
-        print(f"\nSUMMARY")
-        print("-" * 50)
-        print(f"  Streams: {len(lineage['streams'])}")
-        print(f"  Tables:  {len(lineage['tables'])}")
-        print(f"  Queries: {len(lineage['queries'])}")
-        print(f"  Data Flows: {len(lineage['dependencies'])}")
-        print(f"  Generated: {lineage['metadata']['generated_at']}")
+        rel = lineage['relationships']
         
-        # Show actual names found
-        if lineage['streams']:
-            print(f"  Stream names: {list(lineage['streams'].keys())}")
-        if lineage['tables']:
-            print(f"  Table names: {list(lineage['tables'].keys())}")
+        # Summary
+        print(f"\n📊 RELATIONSHIP SUMMARY")
+        print("-" * 60)
+        print(f"  Streams: {len(lineage['streams']):>3} | Tables: {len(lineage['tables']):>3} | Queries: {len(lineage['queries']):>3}")
+        print(f"  Stream → Stream: {len(rel['stream_to_stream']):>3}")
+        print(f"  Stream → Table:  {len(rel['stream_to_table']):>3}") 
+        print(f"  Table → Stream:  {len(rel['table_to_stream']):>3}")
+        print(f"  Table → Table:   {len(rel['table_to_table']):>3}")
+        print(f"  Total Data Flows: {len(lineage['dependencies']):>3}")
         
-        # Streams Section
-        if lineage['streams']:
-            print(f"\nSTREAMS ({len(lineage['streams'])})")
-            print("-" * 50)
-            for stream_name, info in sorted(lineage['streams'].items()):
-                print(f"  {stream_name}")
-                print(f"    Topic: {info['topic']} | Format: {info['format']}")
+        # Stream to Stream Relationships
+        if rel['stream_to_stream']:
+            print(f"\n🔄 STREAM TO STREAM RELATIONSHIPS ({len(rel['stream_to_stream'])})")
+            print("-" * 100)
+            print(f"  {'SOURCE STREAM':<30} {'→':^5} {'TARGET STREAM':<30} {'QUERY':<20} {'TYPE':<15}")
+            print("  " + "-" * 98)
+            for rel in sorted(rel['stream_to_stream'], key=lambda x: (x['source_stream'], x['target_stream'])):
+                print(f"  {rel['source_stream']:<30} {'→':^5} {rel['target_stream']:<30} {rel['query_id']:<20} {rel['relationship_type']:<15}")
         
-        # Tables Section
-        if lineage['tables']:
-            print(f"\nTABLES ({len(lineage['tables'])})")
-            print("-" * 50)
-            for table_name, info in sorted(lineage['tables'].items()):
-                print(f"  {table_name}")
-                print(f"    Topic: {info['topic']} | Format: {info['format']}")
+        # Stream to Table Relationships
+        if rel['stream_to_table']:
+            print(f"\n📥 STREAM TO TABLE RELATIONSHIPS ({len(rel['stream_to_table'])})")
+            print("-" * 100)
+            print(f"  {'SOURCE STREAM':<30} {'→':^5} {'TARGET TABLE':<30} {'QUERY':<20} {'TYPE':<15}")
+            print("  " + "-" * 98)
+            for rel in sorted(rel['stream_to_table'], key=lambda x: (x['source_stream'], x['target_table'])):
+                print(f"  {rel['source_stream']:<30} {'→':^5} {rel['target_table']:<30} {rel['query_id']:<20} {rel['relationship_type']:<15}")
         
-        # Data Flow Section
-        if lineage['dependencies']:
-            print(f"\nDATA FLOWS ({len(lineage['dependencies'])})")
-            print("-" * 80)
-            print(f"  {'SOURCE':<20} -> {'TARGET':<20} {'TYPE':<15} {'QUERY':<15}")
-            print("  " + "-" * 78)
-            for dep in sorted(lineage['dependencies'], key=lambda x: (x['source'], x['target'])):
-                source = dep['source'][:19]
-                target = dep['target'][:19]
-                flow_type = dep['type'].replace('_', ' ')[:14]
-                query_id = dep['query_id'][:14]
-                print(f"  {source:<20} -> {target:<20} {flow_type:<15} {query_id:<15}")
-        else:
-            print(f"\nDATA FLOWS")
-            print("-" * 50)
-            print("  No dependencies found - check if queries exist and have CREATE/INSERT statements")
+        # Table to Stream Relationships
+        if rel['table_to_stream']:
+            print(f"\n📤 TABLE TO STREAM RELATIONSHIPS ({len(rel['table_to_stream'])})")
+            print("-" * 100)
+            print(f"  {'SOURCE TABLE':<30} {'→':^5} {'TARGET STREAM':<30} {'QUERY':<20} {'TYPE':<15}")
+            print("  " + "-" * 98)
+            for rel in sorted(rel['table_to_stream'], key=lambda x: (x['source_table'], x['target_stream'])):
+                print(f"  {rel['source_table']:<30} {'→':^5} {rel['target_stream']:<30} {rel['query_id']:<20} {rel['relationship_type']:<15}")
         
-        # Lineage Graph Section
-        if lineage['lineage_graph']:
-            print(f"\nLINEAGE GRAPH")
-            print("-" * 80)
-            for node, info in sorted(lineage['lineage_graph'].items()):
-                if info['dependencies'] or info['dependents']:
-                    print(f"  {node} ({info['type']})")
-                    if info['dependencies']:
-                        deps = ", ".join(sorted(info['dependencies']))
-                        print(f"    <- Depends on: {deps}")
-                    if info['dependents']:
-                        dependents = ", ".join(sorted(info['dependents']))
-                        print(f"    -> Feeds into: {dependents}")
-                    print()
+        # Table to Table Relationships
+        if rel['table_to_table']:
+            print(f"\n🔄 TABLE TO TABLE RELATIONSHIPS ({len(rel['table_to_table'])})")
+            print("-" * 100)
+            print(f"  {'SOURCE TABLE':<30} {'→':^5} {'TARGET TABLE':<30} {'QUERY':<20} {'TYPE':<15}")
+            print("  " + "-" * 98)
+            for rel in sorted(rel['table_to_table'], key=lambda x: (x['source_table'], x['target_table'])):
+                print(f"  {rel['source_table']:<30} {'→':^5} {rel['target_table']:<30} {rel['query_id']:<20} {rel['relationship_type']:<15}")
+        
+        # Query Relationships (Complete View)
+        if rel['query_relationships']:
+            print(f"\n🔧 QUERY RELATIONSHIPS - COMPLETE VIEW ({len(rel['query_relationships'])})")
+            print("-" * 120)
+            print(f"  {'QUERY ID':<20} {'INPUT':<25} {'INPUT TYPE':<12} {'→':^5} {'OUTPUT':<25} {'OUTPUT TYPE':<12} {'OPERATION':<15}")
+            print("  " + "-" * 118)
+            for rel in sorted(rel['query_relationships'], key=lambda x: x['query_id']):
+                print(f"  {rel['query_id']:<20} {rel['input_object']:<25} {rel['input_type']:<12} {'→':^5} {rel['output_object']:<25} {rel['output_type']:<12} {rel['operation']:<15}")
 
-    def export_to_csv(self, lineage, base_filename: str):
-        """Export lineage data to multiple CSV files"""
+    def export_relationship_csv(self, lineage, base_filename: str):
+        """Export comprehensive relationship data to CSV files"""
         
-        # Export dependencies
-        deps_filename = f"{base_filename}_dependencies.csv"
+        rel = lineage['relationships']
+        
+        # 1. Complete Relationship Master File
+        master_filename = f"{base_filename}_complete_relationships.csv"
+        with open(master_filename, 'w', newline='') as f:
+            writer = csv.writer(f)
+            writer.writerow(['Relationship_Type', 'Source_Name', 'Source_Type', 'Target_Name', 'Target_Type', 'Query_ID', 'Operation_Type'])
+            
+            # Stream to Stream
+            for r in rel['stream_to_stream']:
+                writer.writerow(['STREAM_TO_STREAM', r['source_stream'], 'STREAM', r['target_stream'], 'STREAM', r['query_id'], r['relationship_type']])
+            
+            # Stream to Table
+            for r in rel['stream_to_table']:
+                writer.writerow(['STREAM_TO_TABLE', r['source_stream'], 'STREAM', r['target_table'], 'TABLE', r['query_id'], r['relationship_type']])
+            
+            # Table to Stream
+            for r in rel['table_to_stream']:
+                writer.writerow(['TABLE_TO_STREAM', r['source_table'], 'TABLE', r['target_stream'], 'STREAM', r['query_id'], r['relationship_type']])
+            
+            # Table to Table
+            for r in rel['table_to_table']:
+                writer.writerow(['TABLE_TO_TABLE', r['source_table'], 'TABLE', r['target_table'], 'TABLE', r['query_id'], r['relationship_type']])
+        
+        print(f"✓ Complete relationships exported to: {master_filename}")
+        
+        # 2. Query Relationship Details
+        query_filename = f"{base_filename}_query_relationships.csv"
+        with open(query_filename, 'w', newline='') as f:
+            writer = csv.writer(f)
+            writer.writerow(['Query_ID', 'Input_Object', 'Input_Type', 'Output_Object', 'Output_Type', 'Operation'])
+            
+            for r in rel['query_relationships']:
+                writer.writerow([r['query_id'], r['input_object'], r['input_type'], r['output_object'], r['output_type'], r['operation']])
+        
+        print(f"✓ Query relationships exported to: {query_filename}")
+        
+        # 3. Object Dependencies (What depends on what)
+        deps_filename = f"{base_filename}_object_dependencies.csv"
         with open(deps_filename, 'w', newline='') as f:
             writer = csv.writer(f)
-            writer.writerow(['Source', 'Target', 'Relationship_Type', 'Query_ID'])
-            for dep in lineage['dependencies']:
-                writer.writerow([dep['source'], dep['target'], dep['type'], dep['query_id']])
-        print(f"Dependencies exported to: {deps_filename}")
+            writer.writerow(['Object_Name', 'Object_Type', 'Depends_On', 'Required_By', 'Dependency_Count'])
+            
+            # Build dependency graph
+            dependencies = defaultdict(list)
+            dependents = defaultdict(list)
+            
+            for r in rel['query_relationships']:
+                dependencies[r['output_object']].append(r['input_object'])
+                dependents[r['input_object']].append(r['output_object'])
+            
+            all_objects = set(dependencies.keys()) | set(dependents.keys())
+            for obj in sorted(all_objects):
+                obj_type = 'STREAM' if obj in lineage['streams'] else 'TABLE' if obj in lineage['tables'] else 'EXTERNAL'
+                deps_list = ', '.join(dependencies[obj])
+                required_by_list = ', '.join(dependents[obj])
+                count = len(dependencies[obj])
+                
+                writer.writerow([obj, obj_type, deps_list, required_by_list, count])
         
-        # Export streams
-        streams_filename = f"{base_filename}_streams.csv"
-        with open(streams_filename, 'w', newline='') as f:
-            writer = csv.writer(f)
-            writer.writerow(['Stream_Name', 'Kafka_Topic', 'Format', 'Query'])
-            for stream_name, info in lineage['streams'].items():
-                writer.writerow([stream_name, info['topic'], info['format'], info['query']])
-        print(f"Streams exported to: {streams_filename}")
+        print(f"✓ Object dependencies exported to: {deps_filename}")
         
-        # Export tables
-        tables_filename = f"{base_filename}_tables.csv"
-        with open(tables_filename, 'w', newline='') as f:
+        # 4. Data Flow Summary
+        summary_filename = f"{base_filename}_data_flow_summary.csv"
+        with open(summary_filename, 'w', newline='') as f:
             writer = csv.writer(f)
-            writer.writerow(['Table_Name', 'Kafka_Topic', 'Format', 'Query'])
-            for table_name, info in lineage['tables'].items():
-                writer.writerow([table_name, info['topic'], info['format'], info['query']])
-        print(f"Tables exported to: {tables_filename}")
+            writer.writerow(['Relationship_Category', 'Count', 'Percentage'])
+            
+            total = len(rel['query_relationships'])
+            categories = [
+                ('Stream to Stream', len(rel['stream_to_stream'])),
+                ('Stream to Table', len(rel['stream_to_table'])),
+                ('Table to Stream', len(rel['table_to_stream'])),
+                ('Table to Table', len(rel['table_to_table']))
+            ]
+            
+            for category, count in categories:
+                percentage = (count / total * 100) if total > 0 else 0
+                writer.writerow([category, count, f"{percentage:.1f}%"])
+        
+        print(f"✓ Data flow summary exported to: {summary_filename}")
 
     def export_lineage_json(self, lineage, filename: str):
-        """Export lineage as JSON file"""
+        """Export complete lineage as JSON file"""
         with open(filename, 'w') as f:
             json.dump(lineage, f, indent=2, default=str)
-        print(f"JSON exported to: {filename}")
+        print(f"✓ Complete lineage exported to: {filename}")
 
 def main():
-    parser = argparse.ArgumentParser(description='Offline ksqlDB Lineage Tool - Enhanced Debugging')
+    parser = argparse.ArgumentParser(description='Comprehensive ksqlDB Relationship Analysis')
     parser.add_argument('--url', required=True, help='ksqlDB server URL')
     parser.add_argument('--username', help='Username for basic auth') 
     parser.add_argument('--password', help='Password for basic auth')
@@ -465,13 +426,12 @@ def main():
     parser.add_argument('--api-secret', help='API secret for Confluent Cloud')
     parser.add_argument('--no-ssl-verify', action='store_true', help='Disable SSL verification')
     parser.add_argument('--ca-cert', help='Path to custom CA certificate file')
-    parser.add_argument('--export-csv', help='Export to CSV files (base filename)')
-    parser.add_argument('--export-json', help='Export to JSON file')
-    parser.add_argument('--debug-structure', action='store_true', help='Debug response structure only')
+    parser.add_argument('--export-csv', help='Export relationship CSVs (base filename)')
+    parser.add_argument('--export-json', help='Export complete lineage to JSON file')
     
     args = parser.parse_args()
     
-    ksql_client = KsqlDBLineageOffline(
+    ksql_client = KsqlDBLineageEnhanced(
         ksql_url=args.url,
         username=args.username,
         password=args.password,
@@ -481,17 +441,14 @@ def main():
         ca_cert=args.ca_cert
     )
     
-    if args.debug_structure:
-        ksql_client.debug_response_structure()
-    else:
-        lineage = ksql_client.build_lineage()
-        ksql_client.print_lineage_report(lineage)
-        
-        if args.export_csv:
-            ksql_client.export_to_csv(lineage, args.export_csv)
-        
-        if args.export_json:
-            ksql_client.export_lineage_json(lineage, args.export_json)
+    lineage = ksql_client.build_comprehensive_lineage()
+    ksql_client.print_relationship_report(lineage)
+    
+    if args.export_csv:
+        ksql_client.export_relationship_csv(lineage, args.export_csv)
+    
+    if args.export_json:
+        ksql_client.export_lineage_json(lineage, args.export_json)
 
 if __name__ == "__main__":
     main()
