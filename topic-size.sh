@@ -1,48 +1,55 @@
-!/usr/bin/env bash
-cd /opt/confluent/confluent-7.1.1/bin
-./kafka-topics --bootstrap-server 10.112.75.38:9093 --command-config /cp711/prod_installation/client.properties --list | xargs -I{} sh -c "echo -n '{} , ' && ./kafka-log-dirs --bootstrap-server 10.112.75.38:9093 --command-config /cp711/prod_installation/client.properties --topic-list {} --describe | grep '^{' | grep '^{' | jq '[.brokers[0].logDirs[0].partitions[].size | tonumber] | add'" | tee /root/kafka-topic-state/topics-by-size.$(date +%Y-%m-%d_%H%M).list
-
-chmod 644 /root/kafka-topic-state/topics-by-size*.*
-
-./kafka-topics --bootstrap-server 10.112.75.38:9093 --command-config /cp711/prod_installation/client.properties --list | xargs -I{} sh -c "echo -n '$(date +'%Y-%m-%d %H:%M:%S'), {} , ' && ./kafka-log-dirs --bootstrap-server 10.112.75.38:9093 --command-config /cp711/prod_installation/client.properties --topic-list {} --describe | grep '^{' | jq '[.brokers[0].logDirs[0].partitions[].size | tonumber] | add'" | tee /root/kafka-topic-state/topics-by-size.$(date +%Y-%m-%d_%H%M).list
-
-
 #!/bin/bash
 
-for file in Update-*; do
-    # Remove the "Update-" prefix and store the new file name
-    new_file="${file#Update-}"
+BOOTSTRAP_SERVERS="localhost:9092"
+OUTPUT_FILE="topics_retention_report.csv"
 
-    # Rename the file
-    mv "$file" "$new_file"
+# Function to cleanup on exit
+cleanup() {
+    rm -f "$TEMP_FILE"
+}
+trap cleanup EXIT
+
+TEMP_FILE=$(mktemp)
+
+echo "Starting Kafka topic analysis..."
+echo "topic name|size|retention.ms|cleanup.policy" > "$OUTPUT_FILE"
+
+# Get all topics
+topics_array=($(kafka-topics.sh --bootstrap-server $BOOTSTRAP_SERVERS --list))
+if [ ${#topics_array[@]} -eq 0 ]; then
+    echo "Error: No topics found or cannot connect to Kafka at $BOOTSTRAP_SERVERS"
+    exit 1
+fi
+
+echo "Processing ${#topics_array[@]} topics..."
+
+# Process in larger batches for better efficiency
+batch_size=50
+for ((i=0; i<${#topics_array[@]}; i+=batch_size)); do
+    batch=("${topics_array[@]:i:batch_size}")
+    echo "Processing batch $((i/batch_size + 1)) of $(( (${#topics_array[@]} + batch_size - 1) / batch_size ))..."
+    
+    # Get sizes for current batch
+    topic_list=$(IFS=,; echo "${batch[*]}")
+    kafka-log-dirs.sh --bootstrap-server $BOOTSTRAP_SERVERS --describe --topic-list "$topic_list" > "$TEMP_FILE" 2>/dev/null
+    
+    # Process each topic in the batch
+    for topic in "${batch[@]}"; do
+        # Get size from pre-fetched data
+        size_bytes=$(grep "\"topic\":\"$topic\"" "$TEMP_FILE" 2>/dev/null | \
+            awk -F'"size":' '{for(i=2;i<=NF;i++) {split($i,a,","); sum += a[1]}} END {print sum+0}')
+        
+        # Get topic configuration
+        config=$(kafka-configs.sh --bootstrap-server $BOOTSTRAP_SERVERS \
+            --entity-type topics --entity-name "$topic" --describe 2>/dev/null)
+        
+        retention_ms=$(echo "$config" | grep -o "retention.ms=[^,]*" | head -1 | cut -d= -f2)
+        cleanup_policy=$(echo "$config" | grep -o "cleanup.policy=[^,]*" | head -1 | cut -d= -f2)
+        
+        echo "${topic}|${size_bytes:-0}|${retention_ms:-default}|${cleanup_policy:-delete}" >> "$OUTPUT_FILE"
+    done
 done
 
-
-input {
-    file {
-        path => "/mnt/kafka-topic-state/*.csv"  # Path to the mounted CSV files
-        start_position => "beginning"
-        sincedb_path => "/dev/null"
-        codec => plain {
-            charset => "UTF-8"
-        }
-    }
-}
-
-filter {
-    csv {
-        separator => ","
-        columns => ["date", "topic", "size"]  # Define the columns as per your CSV file
-    }
-    mutate {
-        convert => { "size" => "integer" }  # Convert 'size' field to integer
-    }
-}
-
-output {
-    elasticsearch {
-        hosts => ["http://10.112.75.75:9200"]  # Elasticsearch server
-        index => "kafka-topic-size-%{+YYYY.MM.dd}"
-    }
-    stdout { codec => rubydebug }  # Optional: Debug output to console
-}
+echo "Analysis complete: $OUTPUT_FILE"
+echo "Sample output:"
+head -n 5 "$OUTPUT_FILE"
