@@ -4,9 +4,12 @@ BOOTSTRAP_SERVERS="localhost:9092"
 
 echo "topic name|size|retention.ms|cleanup.policy"
 kafka-topics.sh --bootstrap-server $BOOTSTRAP_SERVERS --list | while read topic; do
-    # Get size - most reliable method
-    size_output=$(kafka-log-dirs.sh --bootstrap-server $BOOTSTRAP_SERVERS --describe --topic-list "$topic" 2>/dev/null)
-    size_bytes=$(echo "$size_output" | grep -o '"size":[0-9]*' | head -1 | cut -d: -f2)
+    # Get size - sum across all partitions using efficient parsing
+    size_bytes=$(kafka-log-dirs.sh --bootstrap-server $BOOTSTRAP_SERVERS --describe --topic-list "$topic" 2>/dev/null | \
+        grep -o '"size":[0-9]*' | \
+        awk -F: '{sum += $2} END {print sum}')
+    
+    # Handle empty result
     size_bytes=${size_bytes:-0}
     
     # Get configuration
