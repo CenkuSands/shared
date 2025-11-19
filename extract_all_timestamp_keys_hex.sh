@@ -1,18 +1,22 @@
 #!/bin/bash
-# extract_timestamp_keys_correct_format.sh
-# Handles column family format: {default, KeyValueWithTimestamp}
+# extract_all_timestamp_keys_final.sh
+# Uses correct column family: keyValueWithTimestamp
+# Extracts keys in hex, decodes them, and filters for timestamps
 
 set -e
 
 BASE_DIR="/var/lib/kafka-streams"
-OUTPUT_FILE="/tmp/all_timestamp_keys_hex_$(date +%Y%m%d_%H%M%S).txt"
+OUTPUT_FILE="/tmp/all_timestamp_keys_final_$(date +%Y%m%d_%H%M%S).txt"
+COLUMN_FAMILY="keyValueWithTimestamp"  # Correct: lowercase 'k'
 
-echo "=== Scanning RocksDB databases - Correct column family parsing ==="
+echo "=== Comprehensive Timestamp Key Extraction ==="
+echo "Column Family: $COLUMN_FAMILY"
 echo ""
 
 # Counter for tracking
 total_dbs=0
 processed_dbs=0
+total_keys_found=0
 
 # Find all RocksDB directories
 find "$BASE_DIR" -type f -name "CURRENT" | while read current_file; do
@@ -21,89 +25,84 @@ find "$BASE_DIR" -type f -name "CURRENT" | while read current_file; do
     ((total_dbs++))
     echo "=== Database: $rocksdb_dir ==="
     
-    # Get the column families output
-    cf_output=$(podman run --rm --security-opt label=disable \
-      -v "${rocksdb_dir}:/data:ro" \
-      docker.io/library/rocksdb-tool ldb --db=/data list_column_families 2>/dev/null)
-    
-    if [ $? -eq 0 ] && [ ! -z "$cf_output" ]; then
-        echo "Column families: $cf_output"
+    # Check if column family exists
+    if podman run --rm --security-opt label=disable \
+       -v "${rocksdb_dir}:/data:ro" \
+       docker.io/library/rocksdb-tool ldb --db=/data list_column_families 2>/dev/null | grep -q "$COLUMN_FAMILY"; then
         
-        # Parse the format: {default, KeyValueWithTimestamp}
-        if [[ "$cf_output" =~ \{(.*)\} ]]; then
-            cf_list="${BASH_REMATCH[1]}"
-            echo "Parsed column families: $cf_list"
-            
-            # Split by comma and process each column family
-            IFS=',' read -ra cfs <<< "$cf_list"
-            for cf in "${cfs[@]}"; do
-                # Clean up the column family name (remove spaces)
-                clean_cf=$(echo "$cf" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
-                echo "  Processing: '$clean_cf'"
+        echo "  ✓ Column family exists"
+        ((processed_dbs++))
+        
+        # Extract keys in HEX format
+        key_count=0
+        timestamp_key_count=0
+        
+        podman run --rm --security-opt label=disable \
+          -v "${rocksdb_dir}:/data:ro" \
+          docker.io/library/rocksdb-tool ldb --db=/data --try_load_options --column_family="$COLUMN_FAMILY" scan --key_hex 2>/dev/null | \
+        while read -r key_hex; do
+            if [[ ! -z "$key_hex" ]]; then
+                ((key_count++))
+                ((total_keys_found++))
                 
-                # Check if this is KeyValueWithTimestamp
-                if [[ "$clean_cf" == "KeyValueWithTimestamp" ]]; then
-                    echo "  ✓ Found KeyValueWithTimestamp, extracting keys..."
-                    ((processed_dbs++))
+                # Remove any prefix (0x, etc.) and clean the hex
+                key_hex_clean=$(echo "$key_hex" | sed 's/^0x//')
+                
+                # Decode hex to text
+                key_text=$(echo "$key_hex_clean" | xxd -r -p 2>/dev/null || echo "DECODE_ERROR")
+                
+                # Check if key contains timestamp (ISO format)
+                if echo "$key_text" | grep -qE "[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z"; then
+                    ((timestamp_key_count++))
+                    # Extract all timestamps found
+                    timestamps=$(echo "$key_text" | grep -oE "[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z" | tr '\n' ',')
                     
-                    # Extract keys in HEX format
-                    key_count=0
-                    podman run --rm --security-opt label=disable \
-                      -v "${rocksdb_dir}:/data:ro" \
-                      docker.io/library/rocksdb-tool ldb --db=/data --try_load_options --column_family="$clean_cf" scan --key_hex 2>/dev/null | \
-                    while read -r key_hex; do
-                        if [[ ! -z "$key_hex" ]]; then
-                            ((key_count++))
-                            # Remove 0x prefix if present
-                            key_hex_clean="${key_hex#0x}"
-                            
-                            # Decode hex to text to check for timestamps
-                            key_text=$(echo "$key_hex_clean" | xxd -r -p 2>/dev/null || echo "DECODE_ERROR")
-                            
-                            # Check if key contains timestamp
-                            if echo "$key_text" | grep -qE "[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z"; then
-                                timestamps=$(echo "$key_text" | grep -oE "[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z" | tr '\n' ',')
-                                echo "$rocksdb_dir|$clean_cf|$key_hex_clean|$key_text|${timestamps%,}" >> "$OUTPUT_FILE"
-                                echo "    ✓ Key $key_count: Has timestamp"
-                            else
-                                echo "    ✗ Key $key_count: No timestamp"
-                            fi
-                        fi
-                    done
-                    
-                    if [ $key_count -eq 0 ]; then
-                        echo "    No keys found in this column family"
-                    fi
+                    # Save to output file
+                    echo "$rocksdb_dir|$key_hex_clean|$key_text|${timestamps%,}" >> "$OUTPUT_FILE"
+                    echo "    ✓ Key $key_count: Has timestamp"
+                else
+                    echo "    ✗ Key $key_count: No timestamp"
                 fi
-            done
-        else
-            echo "  ✗ Unexpected column family format: $cf_output"
-        fi
+            fi
+        done
+        
+        echo "  Summary: $key_count total keys, $timestamp_key_count with timestamps"
+        
     else
-        echo "  ✗ Cannot access or no column families found"
+        echo "  ✗ Column family '$COLUMN_FAMILY' not found"
+        # Show available column families for debugging
+        echo "  Available column families:"
+        podman run --rm --security-opt label=disable \
+          -v "${rocksdb_dir}:/data:ro" \
+          docker.io/library/rocksdb-tool ldb --db=/data list_column_families 2>/dev/null | sed 's/^/    /' || echo "    (cannot list)"
     fi
     echo ""
 done
 
 echo ""
-echo "=== Processing complete ==="
-echo "Total RocksDB databases found: $total_dbs"
-echo "Databases with KeyValueWithTimestamp: $processed_dbs"
+echo "=== PROCESSING COMPLETE ==="
+echo "Total RocksDB databases scanned: $total_dbs"
+echo "Databases with $COLUMN_FAMILY: $processed_dbs"
+echo "Total keys found: $total_keys_found"
 
 if [ -f "$OUTPUT_FILE" ] && [ -s "$OUTPUT_FILE" ]; then
-    echo "Results saved to: $OUTPUT_FILE"
-    echo "Total HEX keys with timestamps: $(wc -l < "$OUTPUT_FILE")"
+    timestamp_keys_count=$(wc -l < "$OUTPUT_FILE")
+    echo "Keys with timestamps: $timestamp_keys_count"
+    echo "Output file: $OUTPUT_FILE"
     
     echo ""
-    echo "=== Sample output ==="
-    head -3 "$OUTPUT_FILE" | while IFS='|' read path cf hex text timestamp; do
-        echo "DB: $(basename "$(dirname "$path")")"
-        echo "CF: $cf"
-        echo "Hex: $hex"
-        echo "Text: $text"
-        echo "Timestamp: $timestamp"
+    echo "=== SAMPLE OUTPUT ==="
+    head -5 "$OUTPUT_FILE" | while IFS='|' read db_path hex_key text_key timestamps; do
+        echo "Database: $(basename "$(dirname "$db_path")")"
+        echo "Hex: $hex_key"
+        echo "Text: $text_key"
+        echo "Timestamps: $timestamps"
         echo "---"
     done
+    
+    echo ""
+    echo "=== DATABASE DISTRIBUTION ==="
+    cut -d'|' -f1 "$OUTPUT_FILE" | sort | uniq -c | sort -nr
 else
     echo "No keys with timestamps found in any database."
     touch "$OUTPUT_FILE"
