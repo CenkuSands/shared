@@ -1,0 +1,1 @@
+podman run --rm --security-opt label=disable -v /var/lib/kafka-streams/_confluent-ksql-default_query_CTAS_SCL_QA3_M_PROMOTIONPLATFORM_ENROLLEDPROMO_EXPLODE_RESERIALIZE_TAB_5962/0_0/rocksdb/KsqlTopic-Reduce:/data:ro docker.io/library/rocksdb-tool ldb --db=/data scan
