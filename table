@@ -1,2 +1,52 @@
-Defaulted container "calico-node" out of: calico-node, kube-flannel, install-cni (init), flexvol-driver (init)
-Error from server (BadRequest): container "calico-node" in pod "rke2-canal-brg4b" is waiting to start: PodInitializing
+2025-12-09 10:02:06.539 [INFO][1] cni-installer/install.go 139: Running as a Kubernetes pod
+2025-12-09 10:02:06.545 [INFO][1] cni-installer/install.go 436: File is already up to date, skipping file="/host/opt/cni/bin/bandwidth"
+2025-12-09 10:02:06.549 [INFO][1] cni-installer/install.go 225: Installed /host/opt/cni/bin/bandwidth
+2025-12-09 10:02:06.553 [INFO][1] cni-installer/install.go 436: File is already up to date, skipping file="/host/opt/cni/bin/bond"
+2025-12-09 10:02:06.556 [INFO][1] cni-installer/install.go 225: Installed /host/opt/cni/bin/bond
+2025-12-09 10:02:06.561 [INFO][1] cni-installer/install.go 436: File is already up to date, skipping file="/host/opt/cni/bin/bridge"
+2025-12-09 10:02:06.564 [INFO][1] cni-installer/install.go 225: Installed /host/opt/cni/bin/bridge
+2025-12-09 10:02:06.609 [INFO][1] cni-installer/install.go 436: File is already up to date, skipping file="/host/opt/cni/bin/calico"
+2025-12-09 10:02:06.647 [INFO][1] cni-installer/install.go 225: Installed /host/opt/cni/bin/calico
+2025-12-09 10:02:06.690 [INFO][1] cni-installer/install.go 436: File is already up to date, skipping file="/host/opt/cni/bin/calico-ipam"
+2025-12-09 10:02:06.728 [INFO][1] cni-installer/install.go 225: Installed /host/opt/cni/bin/calico-ipam
+2025-12-09 10:02:06.736 [INFO][1] cni-installer/install.go 436: File is already up to date, skipping file="/host/opt/cni/bin/dhcp"
+2025-12-09 10:02:06.745 [INFO][1] cni-installer/install.go 225: Installed /host/opt/cni/bin/dhcp
+2025-12-09 10:02:06.749 [INFO][1] cni-installer/install.go 436: File is already up to date, skipping file="/host/opt/cni/bin/dummy"
+2025-12-09 10:02:06.752 [INFO][1] cni-installer/install.go 225: Installed /host/opt/cni/bin/dummy
+2025-12-09 10:02:06.756 [INFO][1] cni-installer/install.go 436: File is already up to date, skipping file="/host/opt/cni/bin/firewall"
+2025-12-09 10:02:06.760 [INFO][1] cni-installer/install.go 225: Installed /host/opt/cni/bin/firewall
+2025-12-09 10:02:06.762 [INFO][1] cni-installer/install.go 436: File is already up to date, skipping file="/host/opt/cni/bin/flannel"
+2025-12-09 10:02:06.763 [INFO][1] cni-installer/install.go 225: Installed /host/opt/cni/bin/flannel
+2025-12-09 10:02:06.767 [INFO][1] cni-installer/install.go 436: File is already up to date, skipping file="/host/opt/cni/bin/host-device"
+2025-12-09 10:02:06.771 [INFO][1] cni-installer/install.go 225: Installed /host/opt/cni/bin/host-device
+2025-12-09 10:02:06.775 [INFO][1] cni-installer/install.go 436: File is already up to date, skipping file="/host/opt/cni/bin/host-local"
+2025-12-09 10:02:06.777 [INFO][1] cni-installer/install.go 225: Installed /host/opt/cni/bin/host-local
+2025-12-09 10:02:06.781 [INFO][1] cni-installer/install.go 436: File is already up to date, skipping file="/host/opt/cni/bin/ipvlan"
+2025-12-09 10:02:06.785 [INFO][1] cni-installer/install.go 225: Installed /host/opt/cni/bin/ipvlan
+2025-12-09 10:02:06.787 [INFO][1] cni-installer/install.go 436: File is already up to date, skipping file="/host/opt/cni/bin/loopback"
+2025-12-09 10:02:06.789 [INFO][1] cni-installer/install.go 225: Installed /host/opt/cni/bin/loopback
+2025-12-09 10:02:06.793 [INFO][1] cni-installer/install.go 436: File is already up to date, skipping file="/host/opt/cni/bin/macvlan"
+2025-12-09 10:02:06.796 [INFO][1] cni-installer/install.go 225: Installed /host/opt/cni/bin/macvlan
+2025-12-09 10:02:06.800 [INFO][1] cni-installer/install.go 436: File is already up to date, skipping file="/host/opt/cni/bin/portmap"
+2025-12-09 10:02:06.803 [INFO][1] cni-installer/install.go 225: Installed /host/opt/cni/bin/portmap
+2025-12-09 10:02:06.807 [INFO][1] cni-installer/install.go 436: File is already up to date, skipping file="/host/opt/cni/bin/ptp"
+2025-12-09 10:02:06.811 [INFO][1] cni-installer/install.go 225: Installed /host/opt/cni/bin/ptp
+2025-12-09 10:02:06.813 [INFO][1] cni-installer/install.go 436: File is already up to date, skipping file="/host/opt/cni/bin/sbr"
+2025-12-09 10:02:06.816 [INFO][1] cni-installer/install.go 225: Installed /host/opt/cni/bin/sbr
+2025-12-09 10:02:06.818 [INFO][1] cni-installer/install.go 436: File is already up to date, skipping file="/host/opt/cni/bin/static"
+2025-12-09 10:02:06.819 [INFO][1] cni-installer/install.go 225: Installed /host/opt/cni/bin/static
+2025-12-09 10:02:06.823 [INFO][1] cni-installer/install.go 436: File is already up to date, skipping file="/host/opt/cni/bin/tap"
+2025-12-09 10:02:06.827 [INFO][1] cni-installer/install.go 225: Installed /host/opt/cni/bin/tap
+2025-12-09 10:02:06.830 [INFO][1] cni-installer/install.go 436: File is already up to date, skipping file="/host/opt/cni/bin/tuning"
+2025-12-09 10:02:06.831 [INFO][1] cni-installer/install.go 225: Installed /host/opt/cni/bin/tuning
+2025-12-09 10:02:06.836 [INFO][1] cni-installer/install.go 436: File is already up to date, skipping file="/host/opt/cni/bin/vlan"
+2025-12-09 10:02:06.839 [INFO][1] cni-installer/install.go 225: Installed /host/opt/cni/bin/vlan
+2025-12-09 10:02:06.841 [INFO][1] cni-installer/install.go 436: File is already up to date, skipping file="/host/opt/cni/bin/vrf"
+2025-12-09 10:02:06.843 [INFO][1] cni-installer/install.go 225: Installed /host/opt/cni/bin/vrf
+2025-12-09 10:02:06.843 [INFO][1] cni-installer/install.go 229: Wrote Calico CNI binaries to /host/opt/cni/bin
+
+2025-12-09 10:02:06.843 [INFO][1] cni-installer/install.go 234: CNI plugin version: v3.30.2
+2025-12-09 10:02:06.843 [INFO][1] cni-installer/install.go 186: /host/secondary-bin-dir is not writeable, skipping
+2025-12-09 10:02:06.843 [INFO][1] cni-installer/winutils.go 149: Neither --kubeconfig nor --master was specified.  Using the inClusterConfig.
+2025-12-09 10:02:36.845 [ERROR][1] cni-installer/token_watch.go 108: Unable to create token for CNI kubeconfig error=Post "https://10.125.16.1:443/api/v1/namespaces/kube-system/serviceaccounts/canal/token": dial tcp 10.125.16.1:443: i/o timeout
+2025-12-09 10:02:36.845 [FATAL][1] cni-installer/install.go 499: Unable to create token for CNI kubeconfig error=Post "https://10.125.16.1:443/api/v1/namespaces/kube-system/serviceaccounts/canal/token": dial tcp 10.125.16.1:443: i/o timeout
