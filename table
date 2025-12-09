@@ -1,5 +1,2 @@
-2025-12-09 03:03:10.734 [INFO][1] cni-installer/install.go 234: CNI plugin version: v3.30.2
-2025-12-09 03:03:10.734 [INFO][1] cni-installer/install.go 186: /host/secondary-bin-dir is not writeable, skipping
-2025-12-09 03:03:10.734 [INFO][1] cni-installer/winutils.go 149: Neither --kubeconfig nor --master was specified.  Using the inClusterConfig.
-2025-12-09 03:03:40.745 [ERROR][1] cni-installer/token_watch.go 108: Unable to create token for CNI kubeconfig error=Post "https://10.125.16.1:443/api/v1/namespaces/kube-system/serviceaccounts/canal/token": dial tcp 10.125.16.1:443: i/o timeout
-2025-12-09 03:03:40.746 [FATAL][1] cni-installer/install.go 499: Unable to create token for CNI kubeconfig error=Post "https://10.125.16.1:443/api/v1/namespaces/kube-system/serviceaccounts/canal/token": dial tcp 10.125.16.1:443: i/o timeout
+Defaulted container "calico-node" out of: calico-node, kube-flannel, install-cni (init), flexvol-driver (init)
+Error from server (BadRequest): container "calico-node" in pod "rke2-canal-brg4b" is waiting to start: PodInitializing
