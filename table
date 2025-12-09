@@ -1,37 +1,5 @@
-input {
-    file {
-        path => "/path/to/your/csv/files/*.csv"  # The path to your CSV file(s)
-        start_position => "beginning"
-        sincedb_path => "/dev/null"  # Ensures Logstash reads the file from the beginning each time
-        codec => plain {
-            charset => "UTF-8"
-        }
-    }
-}
-
-filter {
-    csv {
-        separator => ","  # Your CSV uses a comma to separate fields
-        columns => ["timestamp", "topic", "size"]  # Define the columns for your CSV data
-    }
-    
-    # Convert the 'size' field to an integer (as it represents a size)
-    mutate {
-        convert => { "size" => "integer" }
-    }
-
-    # Optionally, if you want to convert timestamp to an Elasticsearch-friendly format
-    date {
-        match => ["timestamp", "yyyy-MM-dd HH:mm:ss"]
-        target => "@timestamp"
-        remove_field => ["timestamp"]  # Optional: Remove the original timestamp field if you want
-    }
-}
-
-output {
-    elasticsearch {
-        hosts => ["http://localhost:9200"]  # Elasticsearch server (adjust IP if needed)
-        index => "kafka-topics-%{+YYYY.MM.dd}"  # Customize your index name
-    }
-    stdout { codec => rubydebug }  # Debug output to console
-}
+2025-12-09 03:03:10.734 [INFO][1] cni-installer/install.go 234: CNI plugin version: v3.30.2
+2025-12-09 03:03:10.734 [INFO][1] cni-installer/install.go 186: /host/secondary-bin-dir is not writeable, skipping
+2025-12-09 03:03:10.734 [INFO][1] cni-installer/winutils.go 149: Neither --kubeconfig nor --master was specified.  Using the inClusterConfig.
+2025-12-09 03:03:40.745 [ERROR][1] cni-installer/token_watch.go 108: Unable to create token for CNI kubeconfig error=Post "https://10.125.16.1:443/api/v1/namespaces/kube-system/serviceaccounts/canal/token": dial tcp 10.125.16.1:443: i/o timeout
+2025-12-09 03:03:40.746 [FATAL][1] cni-installer/install.go 499: Unable to create token for CNI kubeconfig error=Post "https://10.125.16.1:443/api/v1/namespaces/kube-system/serviceaccounts/canal/token": dial tcp 10.125.16.1:443: i/o timeout
