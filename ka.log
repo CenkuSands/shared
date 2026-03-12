@@ -1,31 +1,34 @@
-[17:28:35 ERR] HandleMessage error: The SSL connection could not be established, see inner exception.
-System.Net.Http.HttpRequestException: The SSL connection could not be established, see inner exception.
- ---> System.IO.IOException:  Received an unexpected EOF or 0 bytes from the transport stream.
-   at System.Net.Security.SslStream.<FillHandshakeBufferAsync>g__InternalFillHandshakeBufferAsync|189_0[TIOAdapter](TIOAdapter adap, ValueTask`1 task, Int32 minSize)
-   at System.Net.Security.SslStream.ReceiveBlobAsync[TIOAdapter](TIOAdapter adapter)
-   at System.Net.Security.SslStream.ForceAuthenticationAsync[TIOAdapter](TIOAdapter adapter, Boolean receiveFirst, Byte[] reAuthenticationData, Boolean isApm)
-   at System.Net.Http.ConnectHelper.EstablishSslConnectionAsync(SslClientAuthenticationOptions sslOptions, HttpRequestMessage request, Boolean async, Stream stream, CancellationToken cancellationToken)
-   --- End of inner exception stack trace ---
-   at System.Net.Http.ConnectHelper.EstablishSslConnectionAsync(SslClientAuthenticationOptions sslOptions, HttpRequestMessage request, Boolean async, Stream stream, CancellationToken cancellationToken)
-   at System.Net.Http.HttpConnectionPool.ConnectAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
-   at System.Net.Http.HttpConnectionPool.CreateHttp11ConnectionAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
-   at System.Net.Http.HttpConnectionPool.AddHttp11ConnectionAsync(HttpRequestMessage request)
-   at System.Threading.Tasks.TaskCompletionSourceWithCancellation`1.WaitWithCancellationAsync(CancellationToken cancellationToken)
-   at System.Net.Http.HttpConnectionPool.GetHttp11ConnectionAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
-   at System.Net.Http.HttpConnectionPool.SendWithVersionDetectionAndRetryAsync(HttpRequestMessage request, Boolean async, Boolean doRequestAuth, CancellationToken cancellationToken)
-   at System.Net.Http.DiagnosticsHandler.SendAsyncCore(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
-   at System.Net.Http.RedirectHandler.SendAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
-   at Microsoft.Extensions.Http.Logging.LoggingHttpMessageHandler.SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
-   at Microsoft.Extensions.Http.Logging.LoggingScopeHttpMessageHandler.SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
-   at System.Net.Http.HttpClient.<SendAsync>g__Core|83_0(HttpRequestMessage request, HttpCompletionOption completionOption, CancellationTokenSource cts, Boolean disposeCts, CancellationTokenSource pendingRequestsCts, CancellationToken originalCancellationToken)
-   at GamingAngel.ServiceWrapper.AngelMultipleAPIServiceWrapperService.<>c__DisplayClass7_0`1.<<PostAsync>b__0>d.MoveNext() in /opt/app-root/src/GamingAngel.ServiceWrapper/AngelMultipleAPIServiceWrapperService.cs:line 70
---- End of stack trace from previous location ---
-   at VML.NextGen.Polly.PollyPolicy.AsyncTracePolicy.DoImplementationAsync[TResult](Func`3 action, Context context, CancellationToken cancellationToken, Boolean continueOnCapturedContext)
-   at Polly.AsyncPolicy.ExecuteAsync[TResult](Func`3 action, Context context, CancellationToken cancellationToken, Boolean continueOnCapturedContext)
-   at GamingAngel.ServiceWrapper.AngelMultipleAPIServiceWrapperService.PostAsync[TRequest](HttpClient client, String propertyCode, TRequest request, CancellationToken cancellation) in /opt/app-root/src/GamingAngel.ServiceWrapper/AngelMultipleAPIServiceWrapperService.cs:line 76
-   at GamingAngel.ServiceWrapper.AngelMultipleAPIServiceWrapperService.PostAsync[TRequest](String propertyName, TRequest request, CancellationToken cancellation) in /opt/app-root/src/GamingAngel.ServiceWrapper/AngelMultipleAPIServiceWrapperService.cs:line 57
-   at GamingAngel.TableInventoryReq.Worker.MessageHandlers.AbstractProtoTableInventoryRequestMessageHandler.HandleMessageAsync(ProtoTableInventory message, IDictionary`2 messageProperties, CancellationToken cancellationToken) in /opt/app-root/src/GamingAngel.TableInventoryReq.Worker/MessageHandlers/AbstractProtoTableInventoryRequestMessageHandler.cs:line 36
-   at GamingAngel.Domain.MessageHandlers.AbstractMultipleProtoMessageHandler`1.HandleMessageAsync(EventMessage`2 message, CancellationToken cancellationToken) in /opt/app-root/src/GamingAngel.Domain/MessageHandlers/AbstractMultipleProtoMessageHandler.cs:line 89
-   at VML.NextGen.Messaging.HostedServices.ConsumerBackgroundService`3.<>c__DisplayClass14_0.<<-ctor>b__1>d.MoveNext() in /azp/agent/_work/24/s/src/VML.NextGen.Messaging/HostedServices/ConsumerBackgroundService.cs:line 74
---- End of stack trace from previous location ---
-   at VML.NextGen.Kafka.Adapters.BusinessLogicExecutor`2.ProcessMessage(ConsumedMessageContext`2 msgCtx, Int32 sessionTimeoutMs, CancellationToken stoppingToken) in /azp/agent/_work/24/s/src/VML.NextGen.Kafka/Adapters/BusinessLogicExecutor.cs:line 44
+[ERROR] The execution result is empty.
+[ERROR] Could not get JVM parameters and dynamic configurations properly.
+[ERROR] Raw output from BashJavaUtils:
+INFO  [] - Using legacy YAML parser to load flink configuration file from /home/jovyan/.flink/conf/flink-conf.yaml.
+INFO  [] - Loading configuration property: fs.s3a.access.key, ESoJp2WJczrLO8kJNHjK
+INFO  [] - Loading configuration property: taskmanager.memory.process.size, 600m
+INFO  [] - Loading configuration property: jobmanager.rpc.address, xxx.xxx.xxx.101
+INFO  [] - Loading configuration property: jobmanager.memory.process.size, 600m
+INFO  [] - Loading configuration property: fs.s3a.path.style.access, true
+INFO  [] - Loading configuration property: jobmanager.rpc.port, 6123
+INFO  [] - Loading configuration property: rest.bind-address, 0.0.0.0
+INFO  [] - Loading configuration property: rest.port, 9091
+INFO  [] - Loading configuration property: fs.s3a.connection.ssl.enabled, true
+INFO  [] - Loading configuration property: high-availability, NONE
+INFO  [] - Loading configuration property: taskmanager.memory.managed.size, 100m
+INFO  [] - Loading configuration property: parallelism.default, 1
+INFO  [] - Loading configuration property: taskmanager.numberOfTaskSlots, 1
+INFO  [] - Loading configuration property: rest.address, xxx.xxx.xxx.101
+INFO  [] - Loading configuration property: fs.s3a.endpoint, https://minio.minio-tenant.svc.cluster.local
+INFO  [] - Loading configuration property: fs.s3a.secret.key, ******
+INFO  [] - The derived from fraction jvm overhead memory (60.000mb (62914560 bytes)) is less than its min value 192.000mb (201326592 bytes), min value will be used instead
+INFO  [] - The derived from fraction network memory (15.200mb (15938355 bytes)) is less than its min value 64.000mb (67108864 bytes), min value will be used instead
+Exception in thread "main" org.apache.flink.configuration.IllegalConfigurationException: TaskManager memory configuration failed: Sum of configured Framework Heap Memory (128.000mb (134217728 bytes)), Framework Off-Heap Memory (128.000mb (134217728 bytes)), Task Off-Heap Memory (0 bytes), Managed Memory (100.000mb (104857600 bytes)) and Network Memory (64.000mb (67108864 bytes)) exceed configured Total Flink Memory (152.000mb (159383552 bytes)).
+        at org.apache.flink.runtime.clusterframework.TaskExecutorProcessUtils.processSpecFromConfig(TaskExecutorProcessUtils.java:166)
+        at org.apache.flink.runtime.util.bash.BashJavaUtils.getTmResourceParams(BashJavaUtils.java:88)
+        at org.apache.flink.runtime.util.bash.BashJavaUtils.runCommand(BashJavaUtils.java:66)
+        at org.apache.flink.runtime.util.bash.BashJavaUtils.main(BashJavaUtils.java:56)
+Caused by: org.apache.flink.configuration.IllegalConfigurationException: Sum of configured Framework Heap Memory (128.000mb (134217728 bytes)), Framework Off-Heap Memory (128.000mb (134217728 bytes)), Task Off-Heap Memory (0 bytes), Managed Memory (100.000mb (104857600 bytes)) and Network Memory (64.000mb (67108864 bytes)) exceed configured Total Flink Memory (152.000mb (159383552 bytes)).
+        at org.apache.flink.runtime.util.config.memory.taskmanager.TaskExecutorFlinkMemoryUtils.deriveFromTotalFlinkMemory(TaskExecutorFlinkMemoryUtils.java:178)
+        at org.apache.flink.runtime.util.config.memory.taskmanager.TaskExecutorFlinkMemoryUtils.deriveFromTotalFlinkMemory(TaskExecutorFlinkMemoryUtils.java:42)
+        at org.apache.flink.runtime.util.config.memory.ProcessMemoryUtils.deriveProcessSpecWithTotalProcessMemory(ProcessMemoryUtils.java:119)
+        at org.apache.flink.runtime.util.config.memory.ProcessMemoryUtils.memoryProcessSpecFromConfig(ProcessMemoryUtils.java:84)
+        at org.apache.flink.runtime.clusterframework.TaskExecutorProcessUtils.processSpecFromConfig(TaskExecutorProcessUtils.java:163)
+        ... 3 more
