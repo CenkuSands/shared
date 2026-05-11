@@ -34,29 +34,49 @@ $wiqlResponse = Invoke-RestMethod -Uri $wiqlUrl -Method Post -Body $wiqlQuery -H
 $workItemIds = $wiqlResponse.workItems.id
 Write-Host "Found $($workItemIds.Count) work items to migrate." -ForegroundColor Green
 
+
+# Create a dictionary to map Old IDs to New IDs (Crucial for Pass 2 Link Reconstruction)
+$idMap = @{} 
+
 # ==========================================
 # Step 2 & 3: Extract and Recreate
 # ==========================================
 foreach ($id in $workItemIds) {
     
-      # --- Step 2: Get Source Item Details ---
+    # --- Step 2: Get Source Item Details ---
     $sourceItemUrl = "$sourceCollectionUrl/_apis/wit/workitems/$id`?$apiVersion"
     $sourceItem = Invoke-RestMethod -Uri $sourceItemUrl -Method Get -Headers @{ Authorization = "Basic $encodedPat" }
     
-    $type = $sourceItem.fields.'System.WorkItemType'
-    $title = $sourceItem.fields.'System.Title'
+    # Extract the type and remove any hidden trailing spaces
+    $type = $sourceItem.fields.'System.WorkItemType'.Trim()
     
-    # Grab all possible rich-text fields
+    # WORK ITEM TYPE MAPPING:
+    # If your target project uses a different Process Template (e.g., Basic instead of Agile),
+    # map the types here to avoid 404 Not Found errors. 
+    # If both projects are Agile, you can just leave this as is, the 'default' will catch it.
+    switch ($type) {
+        "Bug"         { $targetType = "Issue" } # Maps Agile 'Bug' to Basic 'Issue'
+        "Feature"     { $targetType = "Epic" }  # Maps Agile 'Feature' to Basic 'Epic'
+        "User Story"  { $targetType = "Issue" } # Maps Agile 'User Story' to Basic 'Issue'
+        default       { $targetType = $type }   # Keeps the type exactly the same
+    }
+
+    # Safely encode the target type for the URL (converts "User Story" to "User%20Story")
+    $safeType = [uri]::EscapeDataString($targetType)
+
+    # Extract all possible text fields
+    $title = $sourceItem.fields.'System.Title'
     $description = $sourceItem.fields.'System.Description'
     $reproSteps = $sourceItem.fields.'Microsoft.VSTS.TCM.ReproSteps'
     $systemInfo = $sourceItem.fields.'Microsoft.VSTS.TCM.SystemInfo'
     $acceptanceCriteria = $sourceItem.fields.'Microsoft.VSTS.Common.AcceptanceCriteria'
     
-    Write-Host "Migrating ID $id : $title (Type: $type)"
+    Write-Host "Migrating ID $id : $title (Source: $type -> Target: $targetType)"
 
     # --- Step 3: Create Target Item (JSON Patch) ---
     $patchOperations = @()
 
+    # Dynamically build the payload. Only add operations for fields that actually exist.
     if (![string]::IsNullOrWhiteSpace($title)) {
         $patchOperations += @{ op = "add"; path = "/fields/System.Title"; value = $title }
     }
@@ -65,7 +85,6 @@ foreach ($id in $workItemIds) {
         $patchOperations += @{ op = "add"; path = "/fields/System.Description"; value = $description }
     }
 
-    # Add Bug-specific fields
     if (![string]::IsNullOrWhiteSpace($reproSteps)) {
         $patchOperations += @{ op = "add"; path = "/fields/Microsoft.VSTS.TCM.ReproSteps"; value = $reproSteps }
     }
@@ -74,25 +93,35 @@ foreach ($id in $workItemIds) {
         $patchOperations += @{ op = "add"; path = "/fields/Microsoft.VSTS.TCM.SystemInfo"; value = $systemInfo }
     }
 
-    # Add Feature/User Story specific fields
     if (![string]::IsNullOrWhiteSpace($acceptanceCriteria)) {
         $patchOperations += @{ op = "add"; path = "/fields/Microsoft.VSTS.Common.AcceptanceCriteria"; value = $acceptanceCriteria }
     }
 
+    # Convert to JSON using -InputObject to enforce the required JSON Array [ ] format
     $patchDocument = ConvertTo-Json -InputObject $patchOperations -Depth 10
-    $createUrl = "$targetCollectionUrl/$targetProject/_apis/wit/workitems/`$$type`?bypassRules=true&$apiVersion"
+    
+    # Build the creation URL
+    $createUrl = "$targetCollectionUrl/$targetProject/_apis/wit/workitems/`$$safeType`?bypassRules=true&$apiVersion"
 
     try {
+        # Create the item in the target collection
         $targetItem = Invoke-RestMethod -Uri $createUrl -Method Post -Body $patchDocument -Headers $headers
         Write-Host "  -> Successfully created new ID: $($targetItem.id) in target project." -ForegroundColor Green
         
+        # Save the ID mapping so Pass 2 (Link Reconstruction) knows where to point the links
         $idMap[$id] = $targetItem.id
     }
     catch {
         Write-Host "  -> Failed to create item $id." -ForegroundColor Red
+        Write-Host "     HTTP Status: $($_.Exception.Message)" -ForegroundColor DarkRed
+        
+        # Raw error extraction for deep debugging (catches 404s, 500s, etc.)
         if ($_.Exception.Response) {
             $reader = New-Object System.IO.StreamReader($_.Exception.Response.GetResponseStream())
-            $responseBody = $reader.ReadToEnd() | ConvertFrom-Json
-            Write-Host "     ADO Error: $($responseBody.message)" -ForegroundColor DarkRed
+            $rawResponse = $reader.ReadToEnd()
+            
+            Write-Host "     Raw Server Output:" -ForegroundColor Yellow
+            Write-Host "     $rawResponse" -ForegroundColor DarkGray
         }
     }
+}
