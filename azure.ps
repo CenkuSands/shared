@@ -203,3 +203,30 @@ foreach ($oldId in $workItemIds) {
 }
 
 Write-Host "Migration and Link Reconstruction Complete!" -ForegroundColor Cyan
+
+
+Starting Pass 2: Reconstructing Relationships...
+Invoke-RestMethod : {"count":1,"value":{"Message":"The value 'relations' is not valid for Nullable`1.\r\n"}}
+At line:9 char:19
++ ... ourceItem = Invoke-RestMethod -Uri $sourceItemUrl -Method Get -Header ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidOperation: (System.Net.HttpWebRequest:HttpWebRequest) [Invoke-RestMethod], WebException
+    + FullyQualifiedErrorId : WebCmdletWebResponseException,Microsoft.PowerShell.Commands.InvokeRestMethodCommand
+Invoke-RestMethod : {"count":1,"value":{"Message":"The value 'relations' is not valid for Nullable`1.\r\n"}}
+At line:9 char:19
++ ... ourceItem = Invoke-RestMethod -Uri $sourceItemUrl -Method Get -Header ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidOperation: (System.Net.HttpWebRequest:HttpWebRequest) [Invoke-RestMethod], WebException
+    + FullyQualifiedErrorId : WebCmdletWebResponseException,Microsoft.PowerShell.Commands.InvokeRestMethodCommand
+Invoke-RestMethod : {"count":1,"value":{"Message":"The value 'relations' is not valid for Nullable`1.\r\n"}}
+At line:9 char:19
++ ... ourceItem = Invoke-RestMethod -Uri $sourceItemUrl -Method Get -Header ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidOperation: (System.Net.HttpWebRequest:HttpWebRequest) [Invoke-RestMethod], WebException
+    + FullyQualifiedErrorId : WebCmdletWebResponseException,Microsoft.PowerShell.Commands.InvokeRestMethodCommand
+Invoke-RestMethod : {"count":1,"value":{"Message":"The value 'relations' is not valid for Nullable`1.\r\n"}}
+At line:9 char:19
++ ... ourceItem = Invoke-RestMethod -Uri $sourceItemUrl -Method Get -Header ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidOperation: (System.Net.HttpWebRequest:HttpWebRequest) [Invoke-RestMethod], WebException
+    + FullyQualifiedErrorId : WebCmdletWebResponseException,Microsoft.PowerShell.Commands.InvokeRestMethodCommand
