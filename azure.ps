@@ -1,0 +1,79 @@
+# ==========================================
+# Configuration Variables
+# ==========================================
+$pat = "YOUR_PERSONAL_ACCESS_TOKEN_HERE"
+
+$sourceCollectionUrl = "http://your-server:8080/tfs/SourceCollection"
+$sourceProject = "SourceProjectName"
+
+$targetCollectionUrl = "http://your-server:8080/tfs/TargetCollection"
+$targetProject = "TargetProjectName"
+
+$apiVersion = "api-version=6.0"
+
+# Create the Authentication Header
+$encodedPat = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(":$pat"))
+$headers = @{
+    Authorization = "Basic $encodedPat"
+    "Content-Type" = "application/json-patch+json" # Required for Work Item Creation
+}
+
+# ==========================================
+# Step 1: Query Source for Work Items (WIQL)
+# ==========================================
+Write-Host "Querying source project for work items..." -ForegroundColor Cyan
+
+# Simple WIQL: Get all Tasks in the source project
+$wiqlQuery = @{
+    query = "SELECT [System.Id] FROM WorkItems WHERE [System.TeamProject] = '$sourceProject' AND [System.WorkItemType] = 'Task'"
+} | ConvertTo-Json
+
+$wiqlUrl = "$sourceCollectionUrl/_apis/wit/wiql?$apiVersion"
+$wiqlResponse = Invoke-RestMethod -Uri $wiqlUrl -Method Post -Body $wiqlQuery -Headers @{ Authorization = "Basic $encodedPat"; "Content-Type" = "application/json" }
+
+$workItemIds = $wiqlResponse.workItems.id
+Write-Host "Found $($workItemIds.Count) work items to migrate." -ForegroundColor Green
+
+# ==========================================
+# Step 2 & 3: Extract and Recreate
+# ==========================================
+foreach ($id in $workItemIds) {
+    
+    # --- Step 2: Get Source Item Details ---
+    $sourceItemUrl = "$sourceCollectionUrl/_apis/wit/workitems/$id`?$apiVersion"
+    $sourceItem = Invoke-RestMethod -Uri $sourceItemUrl -Method Get -Headers @{ Authorization = "Basic $encodedPat" }
+    
+    $type = $sourceItem.fields.'System.WorkItemType'
+    $title = $sourceItem.fields.'System.Title'
+    $description = $sourceItem.fields.'System.Description'
+    
+    Write-Host "Migrating ID $id : $title"
+
+    # --- Step 3: Create Target Item (JSON Patch) ---
+    # Azure DevOps requires a JSON Patch array to create/update items
+    $patchDocument = @(
+        @{
+            op = "add"
+            path = "/fields/System.Title"
+            value = $title
+        },
+        @{
+            op = "add"
+            path = "/fields/System.Description"
+            value = $description
+        }
+    ) | ConvertTo-Json -Depth 10
+
+    # Note the ?bypassRules=true - this is crucial for setting things like states or historical dates later
+    $createUrl = "$targetCollectionUrl/$targetProject/_apis/wit/workitems/`$$type`?bypassRules=true&$apiVersion"
+
+    try {
+        $targetItem = Invoke-RestMethod -Uri $createUrl -Method Post -Body $patchDocument -Headers $headers
+        Write-Host "  -> Successfully created new ID: $($targetItem.id) in target project." -ForegroundColor Green
+    }
+    catch {
+        Write-Host "  -> Failed to create item $id. Error: $_" -ForegroundColor Red
+    }
+}
+
+Write-Host "Migration script completed." -ForegroundColor Cyan
