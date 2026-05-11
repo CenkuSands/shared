@@ -131,42 +131,37 @@ foreach ($id in $workItemIds) {
 # ==========================================
 Write-Host "Starting Pass 2: Reconstructing Relationships..." -ForegroundColor Cyan
 
-# We loop through the original list of source IDs again
 foreach ($oldId in $workItemIds) {
     
-    # We must use $expand=relations to get the link data from the source. 
-    # By default, ADO hides this data to save bandwidth.
-    $sourceItemUrl = "$sourceCollectionUrl/_apis/wit/workitems/$oldId`?$expand=relations&$apiVersion"
-    $sourceItem = Invoke-RestMethod -Uri $sourceItemUrl -Method Get -Headers @{ Authorization = "Basic $encodedPat" }
+    # BULLETPROOF URL: Using string concatenation to protect the $expand variable
+    $sourceItemUrl = "$sourceCollectionUrl/_apis/wit/workitems/$oldId" + '?$expand=relations&' + $apiVersion
     
-    # Check if the source item actually has any links to migrate
+    try {
+        $sourceItem = Invoke-RestMethod -Uri $sourceItemUrl -Method Get -Headers @{ Authorization = "Basic $encodedPat" }
+    } catch {
+        Write-Host "  -> Failed to GET source item $oldId. Error: $($_.Exception.Message)" -ForegroundColor Red
+        continue # Skip to the next item if this one fails
+    }
+    
     if ($sourceItem.relations) {
         
-        # Get the new ID for this specific item from our translation map
         $newSourceId = $idMap[$oldId]
         $linkOperations = @()
 
         foreach ($relation in $sourceItem.relations) {
-            # We only want to migrate internal Work Item links (Parent, Child, Related, Duplicate)
-            # This skips things like Hyperlinks, GitHub commits, or Attachments for now.
             if ($relation.rel -match "System.LinkTypes") {
                 
-                # Extract the Old Target ID from the URL using Regex (grabs the numbers at the very end of the url)
                 $oldTargetId = [regex]::Match($relation.url, '\d+$').Value
-                
-                # Look up the New Target ID in our map. We cast it to [int] to ensure it matches the hashtable key type.
                 $newTargetId = $idMap[[int]$oldTargetId]
 
-                # CRITICAL CHECK: We only attempt to link if we successfully migrated the target item and know its new ID.
-                # If a linked item was deleted or excluded from our WIQL query, we skip the link to prevent a 404 error.
                 if ($newTargetId) {
-                    $newTargetUrl = "$targetCollectionUrl/$targetProject/_apis/wit/workitems/$newTargetId"
+                    $newTargetUrl = "$targetCollectionUrl/_apis/wit/workitems/$newTargetId"
                     
                     $linkOperations += @{
                         op = "add"
-                        path = "/relations/-" # The '-' means append to the end of the relations array
+                        path = "/relations/-" 
                         value = @{
-                            rel = $relation.rel # Keeps the exact same link type (e.g., Hierarchy-Forward for Child)
+                            rel = $relation.rel 
                             url = $newTargetUrl
                         }
                     }
@@ -174,14 +169,11 @@ foreach ($oldId in $workItemIds) {
             }
         }
 
-        # If we built any valid link operations, send the PATCH request to the target item
         if ($linkOperations.Count -gt 0) {
-            
-            # Using -InputObject to prevent the array unwrapping bug we solved earlier!
             $linkPatchDocument = ConvertTo-Json -InputObject $linkOperations -Depth 10
             
-            # Notice we use PATCH here, not POST, because we are updating an item that already exists
-            $updateUrl = "$targetCollectionUrl/$targetProject/_apis/wit/workitems/$newSourceId`?$apiVersion"
+            # BULLETPROOF URL: Safe concatenation for the PATCH request
+            $updateUrl = "$targetCollectionUrl/$targetProject/_apis/wit/workitems/$newSourceId?" + $apiVersion
 
             try {
                 Invoke-RestMethod -Uri $updateUrl -Method Patch -Body $linkPatchDocument -Headers $headers | Out-Null
@@ -194,8 +186,6 @@ foreach ($oldId in $workItemIds) {
                     $reader = New-Object System.IO.StreamReader($_.Exception.Response.GetResponseStream())
                     $rawResponse = $reader.ReadToEnd()
                     Write-Host "     Raw Server Output: $rawResponse" -ForegroundColor DarkGray
-                } else {
-                    Write-Host "     HTTP Status: $($_.Exception.Message)" -ForegroundColor DarkRed
                 }
             }
         }
@@ -203,30 +193,3 @@ foreach ($oldId in $workItemIds) {
 }
 
 Write-Host "Migration and Link Reconstruction Complete!" -ForegroundColor Cyan
-
-
-Starting Pass 2: Reconstructing Relationships...
-Invoke-RestMethod : {"count":1,"value":{"Message":"The value 'relations' is not valid for Nullable`1.\r\n"}}
-At line:9 char:19
-+ ... ourceItem = Invoke-RestMethod -Uri $sourceItemUrl -Method Get -Header ...
-+                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    + CategoryInfo          : InvalidOperation: (System.Net.HttpWebRequest:HttpWebRequest) [Invoke-RestMethod], WebException
-    + FullyQualifiedErrorId : WebCmdletWebResponseException,Microsoft.PowerShell.Commands.InvokeRestMethodCommand
-Invoke-RestMethod : {"count":1,"value":{"Message":"The value 'relations' is not valid for Nullable`1.\r\n"}}
-At line:9 char:19
-+ ... ourceItem = Invoke-RestMethod -Uri $sourceItemUrl -Method Get -Header ...
-+                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    + CategoryInfo          : InvalidOperation: (System.Net.HttpWebRequest:HttpWebRequest) [Invoke-RestMethod], WebException
-    + FullyQualifiedErrorId : WebCmdletWebResponseException,Microsoft.PowerShell.Commands.InvokeRestMethodCommand
-Invoke-RestMethod : {"count":1,"value":{"Message":"The value 'relations' is not valid for Nullable`1.\r\n"}}
-At line:9 char:19
-+ ... ourceItem = Invoke-RestMethod -Uri $sourceItemUrl -Method Get -Header ...
-+                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    + CategoryInfo          : InvalidOperation: (System.Net.HttpWebRequest:HttpWebRequest) [Invoke-RestMethod], WebException
-    + FullyQualifiedErrorId : WebCmdletWebResponseException,Microsoft.PowerShell.Commands.InvokeRestMethodCommand
-Invoke-RestMethod : {"count":1,"value":{"Message":"The value 'relations' is not valid for Nullable`1.\r\n"}}
-At line:9 char:19
-+ ... ourceItem = Invoke-RestMethod -Uri $sourceItemUrl -Method Get -Header ...
-+                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    + CategoryInfo          : InvalidOperation: (System.Net.HttpWebRequest:HttpWebRequest) [Invoke-RestMethod], WebException
-    + FullyQualifiedErrorId : WebCmdletWebResponseException,Microsoft.PowerShell.Commands.InvokeRestMethodCommand
