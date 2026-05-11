@@ -51,10 +51,10 @@ foreach ($id in $workItemIds) {
 
     # --- Step 3: Create Target Item (JSON Patch) ---
     
-    # Initialize an empty array for our JSON patch operations
+    # --- Step 3: Create Target Item (JSON Patch) ---
+    
     $patchOperations = @()
 
-    # Only add the Title operation if a title exists
     if (![string]::IsNullOrWhiteSpace($title)) {
         $patchOperations += @{
             op = "add"
@@ -63,7 +63,6 @@ foreach ($id in $workItemIds) {
         }
     }
 
-    # Only add the Description operation if a description exists
     if (![string]::IsNullOrWhiteSpace($description)) {
         $patchOperations += @{
             op = "add"
@@ -72,10 +71,9 @@ foreach ($id in $workItemIds) {
         }
     }
 
-    # Convert the dynamically built array to JSON
-    $patchDocument = $patchOperations | ConvertTo-Json -Depth 10
+    # FIX: Using -InputObject forces PowerShell to keep it as a JSON Array [ ]
+    $patchDocument = ConvertTo-Json -InputObject $patchOperations -Depth 10
 
-    # The creation URL (remains the same)
     $createUrl = "$targetCollectionUrl/$targetProject/_apis/wit/workitems/`$$type`?bypassRules=true&$apiVersion"
 
     try {
@@ -83,9 +81,16 @@ foreach ($id in $workItemIds) {
         Write-Host "  -> Successfully created new ID: $($targetItem.id) in target project." -ForegroundColor Green
     }
     catch {
-        # This will catch the error and print the actual response from ADO to help troubleshoot
         Write-Host "  -> Failed to create item $id." -ForegroundColor Red
-        Write-Host "     Error details: $($_.ErrorDetails.Message)" -ForegroundColor DarkRed
+        
+        # Upgraded error extraction to get the exact API rejection reason
+        if ($_.Exception.Response) {
+            $reader = New-Object System.IO.StreamReader($_.Exception.Response.GetResponseStream())
+            $responseBody = $reader.ReadToEnd() | ConvertFrom-Json
+            Write-Host "     ADO Error: $($responseBody.message)" -ForegroundColor DarkRed
+        } else {
+            Write-Host "     Error: $($_.Exception.Message)" -ForegroundColor DarkRed
+        }
     }
 
 
