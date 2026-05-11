@@ -125,3 +125,81 @@ foreach ($id in $workItemIds) {
         }
     }
 }
+
+# ==========================================
+# Phase 4: Reconstruct Links (Pass 2)
+# ==========================================
+Write-Host "Starting Pass 2: Reconstructing Relationships..." -ForegroundColor Cyan
+
+# We loop through the original list of source IDs again
+foreach ($oldId in $workItemIds) {
+    
+    # We must use $expand=relations to get the link data from the source. 
+    # By default, ADO hides this data to save bandwidth.
+    $sourceItemUrl = "$sourceCollectionUrl/_apis/wit/workitems/$oldId`?$expand=relations&$apiVersion"
+    $sourceItem = Invoke-RestMethod -Uri $sourceItemUrl -Method Get -Headers @{ Authorization = "Basic $encodedPat" }
+    
+    # Check if the source item actually has any links to migrate
+    if ($sourceItem.relations) {
+        
+        # Get the new ID for this specific item from our translation map
+        $newSourceId = $idMap[$oldId]
+        $linkOperations = @()
+
+        foreach ($relation in $sourceItem.relations) {
+            # We only want to migrate internal Work Item links (Parent, Child, Related, Duplicate)
+            # This skips things like Hyperlinks, GitHub commits, or Attachments for now.
+            if ($relation.rel -match "System.LinkTypes") {
+                
+                # Extract the Old Target ID from the URL using Regex (grabs the numbers at the very end of the url)
+                $oldTargetId = [regex]::Match($relation.url, '\d+$').Value
+                
+                # Look up the New Target ID in our map. We cast it to [int] to ensure it matches the hashtable key type.
+                $newTargetId = $idMap[[int]$oldTargetId]
+
+                # CRITICAL CHECK: We only attempt to link if we successfully migrated the target item and know its new ID.
+                # If a linked item was deleted or excluded from our WIQL query, we skip the link to prevent a 404 error.
+                if ($newTargetId) {
+                    $newTargetUrl = "$targetCollectionUrl/$targetProject/_apis/wit/workitems/$newTargetId"
+                    
+                    $linkOperations += @{
+                        op = "add"
+                        path = "/relations/-" # The '-' means append to the end of the relations array
+                        value = @{
+                            rel = $relation.rel # Keeps the exact same link type (e.g., Hierarchy-Forward for Child)
+                            url = $newTargetUrl
+                        }
+                    }
+                }
+            }
+        }
+
+        # If we built any valid link operations, send the PATCH request to the target item
+        if ($linkOperations.Count -gt 0) {
+            
+            # Using -InputObject to prevent the array unwrapping bug we solved earlier!
+            $linkPatchDocument = ConvertTo-Json -InputObject $linkOperations -Depth 10
+            
+            # Notice we use PATCH here, not POST, because we are updating an item that already exists
+            $updateUrl = "$targetCollectionUrl/$targetProject/_apis/wit/workitems/$newSourceId`?$apiVersion"
+
+            try {
+                Invoke-RestMethod -Uri $updateUrl -Method Patch -Body $linkPatchDocument -Headers $headers | Out-Null
+                Write-Host "  -> Successfully rebuilt links for New ID: $newSourceId" -ForegroundColor Green
+            }
+            catch {
+                Write-Host "  -> Failed to rebuild links for New ID: $newSourceId." -ForegroundColor Red
+                
+                if ($_.Exception.Response) {
+                    $reader = New-Object System.IO.StreamReader($_.Exception.Response.GetResponseStream())
+                    $rawResponse = $reader.ReadToEnd()
+                    Write-Host "     Raw Server Output: $rawResponse" -ForegroundColor DarkGray
+                } else {
+                    Write-Host "     HTTP Status: $($_.Exception.Message)" -ForegroundColor DarkRed
+                }
+            }
+        }
+    }
+}
+
+Write-Host "Migration and Link Reconstruction Complete!" -ForegroundColor Cyan
