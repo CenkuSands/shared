@@ -50,21 +50,32 @@ foreach ($id in $workItemIds) {
     Write-Host "Migrating ID $id : $title"
 
     # --- Step 3: Create Target Item (JSON Patch) ---
-    # Azure DevOps requires a JSON Patch array to create/update items
-    $patchDocument = @(
-        @{
+    
+    # Initialize an empty array for our JSON patch operations
+    $patchOperations = @()
+
+    # Only add the Title operation if a title exists
+    if (![string]::IsNullOrWhiteSpace($title)) {
+        $patchOperations += @{
             op = "add"
             path = "/fields/System.Title"
             value = $title
-        },
-        @{
+        }
+    }
+
+    # Only add the Description operation if a description exists
+    if (![string]::IsNullOrWhiteSpace($description)) {
+        $patchOperations += @{
             op = "add"
             path = "/fields/System.Description"
             value = $description
         }
-    ) | ConvertTo-Json -Depth 10
+    }
 
-    # Note the ?bypassRules=true - this is crucial for setting things like states or historical dates later
+    # Convert the dynamically built array to JSON
+    $patchDocument = $patchOperations | ConvertTo-Json -Depth 10
+
+    # The creation URL (remains the same)
     $createUrl = "$targetCollectionUrl/$targetProject/_apis/wit/workitems/`$$type`?bypassRules=true&$apiVersion"
 
     try {
@@ -72,11 +83,10 @@ foreach ($id in $workItemIds) {
         Write-Host "  -> Successfully created new ID: $($targetItem.id) in target project." -ForegroundColor Green
     }
     catch {
-        Write-Host "  -> Failed to create item $id. Error: $_" -ForegroundColor Red
+        # This will catch the error and print the actual response from ADO to help troubleshoot
+        Write-Host "  -> Failed to create item $id." -ForegroundColor Red
+        Write-Host "     Error details: $($_.ErrorDetails.Message)" -ForegroundColor DarkRed
     }
-}
-
-Write-Host "Migration script completed." -ForegroundColor Cyan
 
 
 Failed to create item 17. Error: {"$id":"1","innerException":null,"message":"Value cannot be null.","typeName":"Microsoft.VisualStudio.Services.Common.VssPropertyValidationException, Mic
