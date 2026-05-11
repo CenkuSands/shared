@@ -39,60 +39,60 @@ Write-Host "Found $($workItemIds.Count) work items to migrate." -ForegroundColor
 # ==========================================
 foreach ($id in $workItemIds) {
     
-    # --- Step 2: Get Source Item Details ---
+      # --- Step 2: Get Source Item Details ---
     $sourceItemUrl = "$sourceCollectionUrl/_apis/wit/workitems/$id`?$apiVersion"
     $sourceItem = Invoke-RestMethod -Uri $sourceItemUrl -Method Get -Headers @{ Authorization = "Basic $encodedPat" }
     
     $type = $sourceItem.fields.'System.WorkItemType'
     $title = $sourceItem.fields.'System.Title'
-    $description = $sourceItem.fields.'System.Description'
     
-    Write-Host "Migrating ID $id : $title"
+    # Grab all possible rich-text fields
+    $description = $sourceItem.fields.'System.Description'
+    $reproSteps = $sourceItem.fields.'Microsoft.VSTS.TCM.ReproSteps'
+    $systemInfo = $sourceItem.fields.'Microsoft.VSTS.TCM.SystemInfo'
+    $acceptanceCriteria = $sourceItem.fields.'Microsoft.VSTS.Common.AcceptanceCriteria'
+    
+    Write-Host "Migrating ID $id : $title (Type: $type)"
 
     # --- Step 3: Create Target Item (JSON Patch) ---
-    
-    # --- Step 3: Create Target Item (JSON Patch) ---
-    
     $patchOperations = @()
 
     if (![string]::IsNullOrWhiteSpace($title)) {
-        $patchOperations += @{
-            op = "add"
-            path = "/fields/System.Title"
-            value = $title
-        }
+        $patchOperations += @{ op = "add"; path = "/fields/System.Title"; value = $title }
     }
 
     if (![string]::IsNullOrWhiteSpace($description)) {
-        $patchOperations += @{
-            op = "add"
-            path = "/fields/System.Description"
-            value = $description
-        }
+        $patchOperations += @{ op = "add"; path = "/fields/System.Description"; value = $description }
     }
 
-    # FIX: Using -InputObject forces PowerShell to keep it as a JSON Array [ ]
-    $patchDocument = ConvertTo-Json -InputObject $patchOperations -Depth 10
+    # Add Bug-specific fields
+    if (![string]::IsNullOrWhiteSpace($reproSteps)) {
+        $patchOperations += @{ op = "add"; path = "/fields/Microsoft.VSTS.TCM.ReproSteps"; value = $reproSteps }
+    }
 
+    if (![string]::IsNullOrWhiteSpace($systemInfo)) {
+        $patchOperations += @{ op = "add"; path = "/fields/Microsoft.VSTS.TCM.SystemInfo"; value = $systemInfo }
+    }
+
+    # Add Feature/User Story specific fields
+    if (![string]::IsNullOrWhiteSpace($acceptanceCriteria)) {
+        $patchOperations += @{ op = "add"; path = "/fields/Microsoft.VSTS.Common.AcceptanceCriteria"; value = $acceptanceCriteria }
+    }
+
+    $patchDocument = ConvertTo-Json -InputObject $patchOperations -Depth 10
     $createUrl = "$targetCollectionUrl/$targetProject/_apis/wit/workitems/`$$type`?bypassRules=true&$apiVersion"
 
     try {
         $targetItem = Invoke-RestMethod -Uri $createUrl -Method Post -Body $patchDocument -Headers $headers
         Write-Host "  -> Successfully created new ID: $($targetItem.id) in target project." -ForegroundColor Green
+        
+        $idMap[$id] = $targetItem.id
     }
     catch {
         Write-Host "  -> Failed to create item $id." -ForegroundColor Red
-        
-        # Upgraded error extraction to get the exact API rejection reason
         if ($_.Exception.Response) {
             $reader = New-Object System.IO.StreamReader($_.Exception.Response.GetResponseStream())
             $responseBody = $reader.ReadToEnd() | ConvertFrom-Json
             Write-Host "     ADO Error: $($responseBody.message)" -ForegroundColor DarkRed
-        } else {
-            Write-Host "     Error: $($_.Exception.Message)" -ForegroundColor DarkRed
         }
     }
-
-
-Failed to create item 17. Error: {"$id":"1","innerException":null,"message":"Value cannot be null.","typeName":"Microsoft.VisualStudio.Services.Common.VssPropertyValidationException, Mic
-rosoft.VisualStudio.Services.Common","typeKey":"VssPropertyValidationException","errorCode":0,"eventId":3000}
