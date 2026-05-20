@@ -28,6 +28,9 @@ Write-Host "---------------------------------------------------"
 # ==========================================
 # Step 2: Loop Through Repos & Search Content (Raw Line Output)
 # ==========================================
+# ==========================================
+# Step 2: Loop Through Repos & Search Content (The Final Fix)
+# ==========================================
 foreach ($repo in $repositories) {
     $repoName = $repo.name
     $repoId = $repo.id
@@ -42,19 +45,22 @@ foreach ($repo in $repositories) {
             continue 
         }
 
-        $lines = $fileContent -split "`n"
-        $isMatch = $false
+        # THE FIX: This properly splits the lines and destroys any hidden '\r' characters
+        $lines = $fileContent -split "\r?\n"
         
+        $isMatch = $false
         $matchedLineText = ""
         $lineNumber = 0
         
+        $cleanKeyword = $searchString.Trim()
+
         foreach ($line in $lines) {
             $lineNumber++ 
             
-            # Search for the keyword anywhere in the line (case-insensitive)
-            if ($line -match [regex]::Escape($searchString)) {
+            # This looks for your keyword ANYWHERE in the line, ignoring case, safely escaped.
+            if ($line -match [regex]::Escape($cleanKeyword)) {
                 $isMatch = $true
-                # Save the EXACT raw line, keeping all YAML spaces and indentation intact
+                # We save the raw line exactly as it is, keeping your YAML indentation!
                 $matchedLineText = $line 
                 break 
             }
@@ -62,8 +68,7 @@ foreach ($repo in $repositories) {
 
         if ($isMatch) {
             Write-Host "[MATCH FOUND]  : $repoName" -ForegroundColor Green
-            # Output the raw line so you see the keyword and its full context/value
-            Write-Host "               -> Line $lineNumber:$matchedLineText" -ForegroundColor DarkGreen
+            Write-Host "               -> Line ${lineNumber}: $matchedLineText" -ForegroundColor DarkGreen
         } else {
             Write-Host "[NO MATCH]     : $repoName (File downloaded, but keyword not found)" -ForegroundColor Yellow
         }
