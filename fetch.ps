@@ -6,26 +6,23 @@ $sourceCollectionUrl = "https://your-server:8080/tfs/SourceCollection"
 $project = "YourProjectName"
 $apiVersion = "api-version=6.0"
 
-# What file are we looking for? (Must start with a forward slash)
 $targetFilePath = "/azure-pipelines.yml"
-
-# What specific text are we looking for inside that file?
 $searchString = "windows-latest" 
 
-# Authentication Header
+# --- NEW: Define the specific branch to search ---
+$targetBranch = "feature/my-specific-branch"
+
 $encodedPat = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(":$pat"))
 $headers = @{ Authorization = "Basic $encodedPat" }
 
 # ==========================================
-# Step 1: Get All Repositories in the Project
+# Step 1: Get All Repositories
 # ==========================================
-Write-Host "Fetching list of all repositories in project: $project..." -ForegroundColor Cyan
-
+Write-Host "Fetching list of all repositories..." -ForegroundColor Cyan
 $reposUrl = "$sourceCollectionUrl/$project/_apis/git/repositories?$apiVersion"
 $reposResponse = Invoke-RestMethod -Uri $reposUrl -Method Get -Headers $headers
-
 $repositories = $reposResponse.value
-Write-Host "Found $($repositories.Count) repositories. Starting scan..." -ForegroundColor Green
+Write-Host "Found $($repositories.Count) repositories. Scanning branch '$targetBranch'..." -ForegroundColor Green
 Write-Host "---------------------------------------------------"
 
 # ==========================================
@@ -35,30 +32,35 @@ foreach ($repo in $repositories) {
     $repoName = $repo.name
     $repoId = $repo.id
     
-    # Construct the Git Items URL for this specific repo (using single quotes to protect $expand/variables)
-    $itemUrl = "$sourceCollectionUrl/$project/_apis/git/repositories/$repoId/items?path=$targetFilePath&includeContent=true&" + $apiVersion
+    # --- UPDATED: The URL now includes the branch parameters ---
+    $itemUrl = "$sourceCollectionUrl/$project/_apis/git/repositories/$repoId/items?path=$targetFilePath&versionDescriptor.version=$targetBranch&versionDescriptor.versionType=branch&includeContent=true&" + $apiVersion
     
     try {
-        # Attempt to get the file
         $fileResponse = Invoke-RestMethod -Uri $itemUrl -Method Get -Headers $headers
-        $fileContent = $fileResponse.content
         
-        # Check if the content contains our search string
-        # Note: -match in PowerShell is case-insensitive by default. Use -cmatch for case-sensitive.
-        if ($fileContent -match [regex]::Escape($searchString)) {
+        [string]$fileContent = $fileResponse.content
+        $lines = $fileContent -split "`n"
+        $isMatch = $false
+        
+        foreach ($line in $lines) {
+            if ($line.Trim() -match [regex]::Escape($searchString.Trim())) {
+                $isMatch = $true
+                break 
+            }
+        }
+
+        if ($isMatch) {
             Write-Host "[MATCH FOUND]  : $repoName" -ForegroundColor Green
         } else {
-            Write-Host "[NO MATCH]     : $repoName (File exists, but content not found)" -ForegroundColor Yellow
+            Write-Host "[NO MATCH]     : $repoName (File exists, but string not found)" -ForegroundColor Yellow
         }
         
     } catch {
-        # If the file doesn't exist, ADO throws a 404 Not Found. 
-        # If the repo is completely empty (uninitialized), it might throw a 400.
-        # We catch these gracefully so the script doesn't crash and keeps scanning the next repo.
         $errorMessage = $_.Exception.Message
         
+        # --- UPDATED: A 404 now means either the file OR the branch is missing in this repo ---
         if ($errorMessage -match "404") {
-            Write-Host "[FILE MISSING] : $repoName (File '$targetFilePath' does not exist here)" -ForegroundColor DarkGray
+            Write-Host "[NOT FOUND]    : $repoName (Either branch '$targetBranch' or file '$targetFilePath' does not exist here)" -ForegroundColor DarkGray
         } else {
             Write-Host "[ERROR]        : $repoName ($errorMessage)" -ForegroundColor Red
         }
