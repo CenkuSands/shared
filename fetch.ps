@@ -31,39 +31,44 @@ Write-Host "---------------------------------------------------"
 # ==========================================
 # Step 2: Loop Through Repos & Search Content
 # ==========================================
+# ==========================================
+# Step 2: Loop Through Repos & Search Content (With Line Output)
+# ==========================================
 foreach ($repo in $repositories) {
     $repoName = $repo.name
     $repoId = $repo.id
     
-    # THE FIX: Using string concatenation to safely add &$format=text
-    # This forces ADO to return pure text instead of a JSON object.
     $itemUrl = "$sourceCollectionUrl/$project/_apis/git/repositories/$repoId/items" + '?path=' + $targetFilePath + '&versionDescriptor.version=' + $targetBranch + '&versionDescriptor.versionType=branch&$format=text&' + $apiVersion
     
     try {
-        # Because we used $format=text, the response IS the raw file content
         $fileContent = Invoke-RestMethod -Uri $itemUrl -Method Get -Headers $headers
         
-        # --- DEBUG CHECK ---
-        # If the file is actually empty (or ADO refused to send the text), flag it!
         if ([string]::IsNullOrWhiteSpace($fileContent)) {
             Write-Host "[EMPTY FILE]   : $repoName (File was found, but it downloaded completely blank)" -ForegroundColor Magenta
-            continue # Skip to the next repo
+            continue 
         }
 
-        # Split the raw text into individual lines
         $lines = $fileContent -split "`n"
         $isMatch = $false
         
+        # --- NEW: Variables to store the match details ---
+        $matchedLineText = ""
+        $lineNumber = 0
+        
         foreach ($line in $lines) {
-            # Strip whitespace and check for a match
+            $lineNumber++ # Increment the line number on every loop
+            
             if ($line.Trim() -match [regex]::Escape($searchString.Trim())) {
                 $isMatch = $true
-                break 
+                $matchedLineText = $line.Trim() # Save the exact text of the line
+                break # We found the first occurrence, stop searching this file
             }
         }
 
         if ($isMatch) {
             Write-Host "[MATCH FOUND]  : $repoName" -ForegroundColor Green
+            # --- NEW: Print the line number and text ---
+            Write-Host "               -> Line $lineNumber: $matchedLineText" -ForegroundColor DarkGreen
         } else {
             Write-Host "[NO MATCH]     : $repoName (File downloaded, but string not found)" -ForegroundColor Yellow
         }
