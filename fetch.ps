@@ -28,21 +28,34 @@ Write-Host "---------------------------------------------------"
 # ==========================================
 # Step 2: Loop Through Repos & Search Content
 # ==========================================
+# ==========================================
+# Step 2: Loop Through Repos & Search Content
+# ==========================================
 foreach ($repo in $repositories) {
     $repoName = $repo.name
     $repoId = $repo.id
     
-    # --- UPDATED: The URL now includes the branch parameters ---
-    $itemUrl = "$sourceCollectionUrl/$project/_apis/git/repositories/$repoId/items?path=$targetFilePath&versionDescriptor.version=$targetBranch&versionDescriptor.versionType=branch&includeContent=true&" + $apiVersion
+    # THE FIX: Using string concatenation to safely add &$format=text
+    # This forces ADO to return pure text instead of a JSON object.
+    $itemUrl = "$sourceCollectionUrl/$project/_apis/git/repositories/$repoId/items" + '?path=' + $targetFilePath + '&versionDescriptor.version=' + $targetBranch + '&versionDescriptor.versionType=branch&$format=text&' + $apiVersion
     
     try {
-        $fileResponse = Invoke-RestMethod -Uri $itemUrl -Method Get -Headers $headers
+        # Because we used $format=text, the response IS the raw file content
+        $fileContent = Invoke-RestMethod -Uri $itemUrl -Method Get -Headers $headers
         
-        [string]$fileContent = $fileResponse.content
+        # --- DEBUG CHECK ---
+        # If the file is actually empty (or ADO refused to send the text), flag it!
+        if ([string]::IsNullOrWhiteSpace($fileContent)) {
+            Write-Host "[EMPTY FILE]   : $repoName (File was found, but it downloaded completely blank)" -ForegroundColor Magenta
+            continue # Skip to the next repo
+        }
+
+        # Split the raw text into individual lines
         $lines = $fileContent -split "`n"
         $isMatch = $false
         
         foreach ($line in $lines) {
+            # Strip whitespace and check for a match
             if ($line.Trim() -match [regex]::Escape($searchString.Trim())) {
                 $isMatch = $true
                 break 
@@ -52,13 +65,12 @@ foreach ($repo in $repositories) {
         if ($isMatch) {
             Write-Host "[MATCH FOUND]  : $repoName" -ForegroundColor Green
         } else {
-            Write-Host "[NO MATCH]     : $repoName (File exists, but string not found)" -ForegroundColor Yellow
+            Write-Host "[NO MATCH]     : $repoName (File downloaded, but string not found)" -ForegroundColor Yellow
         }
         
     } catch {
         $errorMessage = $_.Exception.Message
         
-        # --- UPDATED: A 404 now means either the file OR the branch is missing in this repo ---
         if ($errorMessage -match "404") {
             Write-Host "[NOT FOUND]    : $repoName (Either branch '$targetBranch' or file '$targetFilePath' does not exist here)" -ForegroundColor DarkGray
         } else {
@@ -66,6 +78,3 @@ foreach ($repo in $repositories) {
         }
     }
 }
-
-Write-Host "---------------------------------------------------"
-Write-Host "Scan complete!" -ForegroundColor Cyan
