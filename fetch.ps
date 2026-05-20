@@ -26,13 +26,7 @@ Write-Host "Found $($repositories.Count) repositories. Scanning branch '$targetB
 Write-Host "---------------------------------------------------"
 
 # ==========================================
-# Step 2: Loop Through Repos & Search Content
-# ==========================================
-# ==========================================
-# Step 2: Loop Through Repos & Search Content
-# ==========================================
-# ==========================================
-# Step 2: Loop Through Repos & Search Content (With Line Output)
+# Step 2: Loop Through Repos & Search Content (Raw Line Output)
 # ==========================================
 foreach ($repo in $repositories) {
     $repoName = $repo.name
@@ -51,26 +45,27 @@ foreach ($repo in $repositories) {
         $lines = $fileContent -split "`n"
         $isMatch = $false
         
-        # --- NEW: Variables to store the match details ---
         $matchedLineText = ""
         $lineNumber = 0
         
         foreach ($line in $lines) {
-            $lineNumber++ # Increment the line number on every loop
+            $lineNumber++ 
             
-            if ($line.Trim() -match [regex]::Escape($searchString.Trim())) {
+            # Search for the keyword anywhere in the line (case-insensitive)
+            if ($line -match [regex]::Escape($searchString)) {
                 $isMatch = $true
-                $matchedLineText = $line.Trim() # Save the exact text of the line
-                break # We found the first occurrence, stop searching this file
+                # Save the EXACT raw line, keeping all YAML spaces and indentation intact
+                $matchedLineText = $line 
+                break 
             }
         }
 
         if ($isMatch) {
             Write-Host "[MATCH FOUND]  : $repoName" -ForegroundColor Green
-            # --- NEW: Print the line number and text ---
-            Write-Host "               -> Line $lineNumber: $matchedLineText" -ForegroundColor DarkGreen
+            # Output the raw line so you see the keyword and its full context/value
+            Write-Host "               -> Line $lineNumber:$matchedLineText" -ForegroundColor DarkGreen
         } else {
-            Write-Host "[NO MATCH]     : $repoName (File downloaded, but string not found)" -ForegroundColor Yellow
+            Write-Host "[NO MATCH]     : $repoName (File downloaded, but keyword not found)" -ForegroundColor Yellow
         }
         
     } catch {
